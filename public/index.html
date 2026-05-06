@@ -1048,7 +1048,7 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);di
         <div class="panel-hdr">
           <span class="panel-ttl">Member Directory</span>
           <div class="filter-row" style="margin:0">
-            <input class="filter-inp" id="m-search" placeholder="Search name/plan/phone…" oninput="renderMembersTable()">
+            <input class="filter-inp" id="m-search" placeholder="Search name / member ID / phone…" oninput="renderMembersTable()">
             <select class="filter-sel" id="m-fplan" onchange="renderMembersTable()">
               <option value="">All Plans</option>
               <option>Plan A Strength</option><option>Plan A Cardio</option>
@@ -1147,7 +1147,7 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);di
           <button class="att-tab active" id="att-tab-members" onclick="setAttTab('members',this)">👥 Members</button>
           <button class="att-tab" id="att-tab-trainers" onclick="setAttTab('trainers',this)">🎽 Trainers</button>
         </div>
-        <input type="text" id="att-search" class="att-search" placeholder="Search name…" oninput="renderAttendance()">
+        <input type="text" id="att-search" class="att-search" placeholder="Search name / member ID…" oninput="renderAttendance()">
         <button class="btn btn-ghost btn-sm" onclick="exportAttendance()">⬇ Export</button>
       </div>
       <div class="att-summary" id="att-summary"></div>
@@ -1413,9 +1413,13 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);di
 <div class="modal-overlay" id="member-modal" onclick="if(event.target===this)closeMemberModal()">
   <div class="modal">
     <h3 id="member-modal-title">➕ Add New Member</h3>
+    <div class="form-group">
+      <label>Member ID * <span style="font-size:9px;color:var(--text-muted);font-weight:400">— unique ID assigned to this member (e.g. ASF001)</span></label>
+      <input type="text" id="f-custom-id" placeholder="e.g. ASF001, M001, 101…" oninput="this.value=this.value.toUpperCase()" autocomplete="off" style="letter-spacing:.08em;font-weight:700">
+    </div>
     <div class="form-row">
       <div class="form-group"><label>Full Name *</label><input type="text" id="f-name" placeholder="e.g. Priya Sharma"></div>
-      <div class="form-group"><label>Phone</label><input type="tel" id="f-phone" placeholder="98765 43210"></div>
+      <div class="form-group"><label>Phone *</label><input type="tel" id="f-phone" placeholder="98765 43210"></div>
     </div>
     <div class="form-group">
       <label>Membership Plan *</label>
@@ -2783,7 +2787,7 @@ function renderMembersTable() {
   const fs=document.getElementById('m-fstatus').value;
   const fd=document.getElementById('m-fdur').value;
   let data=memberStore.filter(m=>{
-    const qm=!q||(m.name.toLowerCase().includes(q)||m.plan.toLowerCase().includes(q)||(m.phone||'').includes(q));
+    const qm=!q||(m.name.toLowerCase().includes(q)||(m.customId||'').toLowerCase().includes(q)||(m.phone||'').includes(q)||m.plan.toLowerCase().includes(q));
     return qm&&(!fp||m.plan===fp)&&(!fs||getStatus(m.expiry).label===fs)&&(!fd||m.duration===fd);
   });
   data=[...data].sort((a,b)=>{let va=a[membersSort.field],vb=b[membersSort.field];if(membersSort.field==='paid'){va=+va;vb=+vb;}return (va<vb?-1:va>vb?1:0)*(membersSort.dir==='asc'?1:-1);});
@@ -2792,8 +2796,9 @@ function renderMembersTable() {
   const sl=data.slice((membersPage-1)*M_PS,membersPage*M_PS);
   document.getElementById('members-tbody').innerHTML=sl.map(m=>{
     const st=getStatus(m.expiry);
+    const dispId = m.customId || `M-${String(m.id).padStart(3,'0')}`;
     return `<tr>
-      <td><span class="mid-badge">M-${String(m.id).padStart(3,'0')}</span></td>
+      <td><span class="mid-badge">${dispId}</span></td>
       <td><div class="name-cell"><div class="av" style="background:${avColor(m.id)}">${m.avatar}</div>${m.name}</div></td>
       <td>
         <span class="plan-tag">${m.plan.replace('Plan ','')}</span>
@@ -2996,8 +3001,9 @@ function setAttTab(tab, el) {
 }
 
 function getAttRecord(date) {
-  if (!attendanceStore[date]) attendanceStore[date] = {members:{}, trainers:{}, exercises:{}};
+  if (!attendanceStore[date]) attendanceStore[date] = {members:{}, trainers:{}, exercises:{}, exerciseNotes:{}};
   if (!attendanceStore[date].exercises) attendanceStore[date].exercises = {};
+  if (!attendanceStore[date].exerciseNotes) attendanceStore[date].exerciseNotes = {};
   return attendanceStore[date];
 }
 
@@ -3029,65 +3035,166 @@ function renderAttendanceSummary(date) {
 
 function renderAttendance() {
   const date = document.getElementById('att-date').value || todayStr();
-  const q    = (document.getElementById('att-search').value||'').toLowerCase();
+  const q    = (document.getElementById('att-search').value || '').toLowerCase();
   const rec  = getAttRecord(date);
-  const base = attTab==='members' ? memberStore : trainerStore.filter(t=>!t.isOwner);
-  const list = base.filter(p => !q || p.name.toLowerCase().includes(q));
   renderAttendanceSummary(date);
 
-  document.getElementById('att-grid').innerHTML = list.map(p => {
-    const st     = (rec[attTab] && rec[attTab][p.id]) || 'nomark';
-    const col    = avColor(p.id);
-    const sub    = attTab==='members'
-      ? ((p.plan||'').replace('Plan ','') + (p.duration?' · '+p.duration:''))
-      : (p.role||'');
-    const idBadge = attTab==='members'
-      ? `<span class="mid-badge" style="font-size:8.5px;padding:1px 5px">M-${String(p.id).padStart(3,'0')}</span>`
-      : `<span class="tid-badge" style="font-size:8.5px;padding:1px 5px">T-${String(p.id).padStart(3,'0')}</span>`;
+  if (attTab === 'trainers') {
+    // Trainers — simple list, no exercise boxes
+    const tList = trainerStore.filter(t => !t.isOwner)
+      .filter(t => !q || t.name.toLowerCase().includes(q));
+    document.getElementById('att-grid').innerHTML = tList.map(t => {
+      const st  = (rec.trainers && rec.trainers[t.id]) || 'nomark';
+      const col = avColor(t.id);
+      const tid = `T-${String(t.id).padStart(3,'0')}`;
+      return `<div class="att-card ${st}" id="att-card-${t.id}" style="flex-direction:column;align-items:flex-start">
+        <div style="display:flex;align-items:center;gap:12px;width:100%">
+          <div class="av" style="background:${col};width:36px;height:36px;font-size:13px;flex-shrink:0">${t.avatar||initials(t.name)}</div>
+          <div style="flex:1;min-width:0">
+            <div class="att-name">${t.name}</div>
+            <div class="att-plan"><span class="tid-badge" style="font-size:8.5px;padding:1px 5px">${tid}</span> ${t.role||''}</div>
+          </div>
+          <div class="att-btns">
+            <button class="att-btn ${st==='present'?'present':''}" onclick="setAttStatus('${date}','trainers',${t.id},'present',this)">✅</button>
+            <button class="att-btn ${st==='absent'?'absent':''}"   onclick="setAttStatus('${date}','trainers',${t.id},'absent',this)">❌</button>
+            <button class="att-btn ${st==='late'?'late':''}"       onclick="setAttStatus('${date}','trainers',${t.id},'late',this)">⏰</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('') || `<div style="padding:24px;color:var(--text-muted);grid-column:1/-1;text-align:center">No trainers found</div>`;
+    return;
+  }
 
-    // Declare exercises/savedEx for ALL members (empty for trainers tab)
-    const cat      = (attTab === 'members') ? (p.exerciseCategory || '') : '';
+  // MEMBERS tab
+  let mList = [...memberStore];
+
+  // Search by name OR customId
+  if (q) mList = mList.filter(m =>
+    m.name.toLowerCase().includes(q) ||
+    (m.customId || '').toLowerCase().includes(q) ||
+    `m-${String(m.id).padStart(3,'0')}`.includes(q)
+  );
+
+  // Sort by customId alphabetically (fallback to auto ID)
+  mList.sort((a, b) => {
+    const ia = (a.customId || `M${String(a.id).padStart(3,'0')}`).toUpperCase();
+    const ib = (b.customId || `M${String(b.id).padStart(3,'0')}`).toUpperCase();
+    return ia < ib ? -1 : ia > ib ? 1 : 0;
+  });
+
+  document.getElementById('att-grid').innerHTML = mList.map(p => {
+    const st     = (rec.members && rec.members[p.id]) || 'nomark';
+    const col    = avColor(p.id);
+    const dispId = p.customId || `M-${String(p.id).padStart(3,'0')}`;
+    const cat    = p.exerciseCategory || '';
     const exercises = cat ? EXERCISE_CATEGORIES[cat] || [] : [];
-    const savedEx   = (attTab === 'members') ? ((rec.exercises && rec.exercises[p.id]) || []) : [];
+    const savedEx   = (rec.exercises && rec.exercises[p.id]) || [];
+    const hasOthers = savedEx.includes('Others');
 
     let exPanel = '';
-    if (attTab === 'members' && exercises.length > 0) {
-      const catBadge = `<span class="cat-badge" style="margin-left:4px">${cat}</span>`;
-      const checks   = exercises.filter(e => e !== 'Rest').map((ex, idx) => {
+    if (exercises.length > 0) {
+      const checks = exercises.filter(e => e !== 'Rest').map((ex, idx) => {
         const checked = savedEx.includes(ex) ? 'checked' : '';
-        const cbId    = `ex-${p.id}-${idx}`;
+        const cbId = `ex-${p.id}-${idx}`;
         return `<div class="ex-check-item">
           <input type="checkbox" id="${cbId}" ${checked}
             onchange="toggleExercise('${date}',${p.id},'${ex.replace(/'/g,"\\'")}',this.checked)">
           <label for="${cbId}">${ex}</label>
         </div>`;
       }).join('');
+
+      // "Others" option — free-text box
+      const othersCbId  = `ex-${p.id}-others`;
+      const othersText  = rec.exerciseNotes && rec.exerciseNotes[p.id] ? rec.exerciseNotes[p.id] : '';
+      const othersCheck = hasOthers ? 'checked' : '';
+      const othersBox   = `<div class="ex-check-item" id="others-item-${p.id}">
+        <input type="checkbox" id="${othersCbId}" ${othersCheck}
+          onchange="toggleOthersExercise('${date}',${p.id},this.checked)">
+        <label for="${othersCbId}" style="color:var(--warn)">Others</label>
+      </div>
+      <div id="others-input-${p.id}" style="display:${hasOthers?'flex':'none'};align-items:center;gap:6px;margin-top:5px;padding:5px 6px;background:rgba(245,166,35,.07);border-radius:6px;border:1px solid rgba(245,166,35,.2)">
+        <span style="font-size:11px;color:var(--warn);flex-shrink:0">✏️</span>
+        <input type="text" id="others-text-${p.id}" placeholder="Type the exercise name…" value="${othersText.replace(/"/g,'&quot;')}"
+          style="flex:1;background:transparent;border:none;outline:none;font-size:12px;color:var(--text-primary);font-family:var(--font-b)"
+          oninput="saveOthersText('${date}',${p.id},this.value)">
+      </div>`;
+
       exPanel = `<div class="ex-check-panel" id="exp-${p.id}">
-        <div class="ex-check-title">Category ${cat} · Today's exercises ${catBadge}</div>
-        <div class="ex-check-list">${checks}</div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:5px;font-style:italic">✏️ Tick the exercises done today — at least one required to mark Present</div>
+        <div class="ex-check-title">Category ${cat} <span class="cat-badge">${cat}</span></div>
+        <div class="ex-check-list">${checks}${othersBox}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:5px;font-style:italic">✏️ Tick at least one exercise to enable Present</div>
       </div>`;
     }
+
+    const hasExercises    = exercises.length > 0;
+    const presentDisabled = hasExercises && savedEx.length === 0 && st !== 'present';
 
     return `<div class="att-card ${st}" id="att-card-${p.id}" style="flex-direction:column;align-items:flex-start">
       <div style="display:flex;align-items:center;gap:12px;width:100%">
         <div class="av" style="background:${col};width:36px;height:36px;font-size:13px;flex-shrink:0">${p.avatar||initials(p.name)}</div>
-        <div style="flex:1;min-width:0"><div class="att-name">${p.name}</div><div class="att-plan">${idBadge} ${sub}</div></div>
+        <div style="flex:1;min-width:0">
+          <div class="att-name">${p.name}</div>
+          <div class="att-plan"><span class="mid-badge" style="font-size:9px;padding:1px 6px">${dispId}</span></div>
+        </div>
         <div class="att-btns">
-          ${attTab === 'members' && exercises.length > 0
-            ? `<button class="att-btn ${st==='present'?'present':''}" id="present-btn-${p.id}"
-                onclick="setAttStatus('${date}','${attTab}',${p.id},'present',this)" title="Tick at least 1 exercise first"
-                ${savedEx.length === 0 && st !== 'present' ? 'disabled style="opacity:.35;cursor:not-allowed"' : ''}>✅</button>`
-            : `<button class="att-btn ${st==='present'?'present':''}" onclick="setAttStatus('${date}','${attTab}',${p.id},'present',this)" title="Present">✅</button>`
-          }
-          <button class="att-btn ${st==='absent'?'absent':''}"  onclick="setAttStatus('${date}','${attTab}',${p.id},'absent',this)"  title="Absent">❌</button>
-          <button class="att-btn ${st==='late'?'late':''}"      onclick="setAttStatus('${date}','${attTab}',${p.id},'late',this)"    title="Late">⏰</button>
+          <button class="att-btn ${st==='present'?'present':''}" id="present-btn-${p.id}"
+            onclick="setAttStatus('${date}','members',${p.id},'present',this)"
+            title="${presentDisabled?'Tick at least 1 exercise first':'Present'}"
+            ${presentDisabled?'disabled style="opacity:.35;cursor:not-allowed"':''}>✅</button>
+          <button class="att-btn ${st==='absent'?'absent':''}"  onclick="setAttStatus('${date}','members',${p.id},'absent',this)">❌</button>
+          <button class="att-btn ${st==='late'?'late':''}"      onclick="setAttStatus('${date}','members',${p.id},'late',this)">⏰</button>
         </div>
       </div>
       ${exPanel}
     </div>`;
-  }).join('') || `<div style="padding:24px;color:var(--text-muted);grid-column:1/-1;text-align:center">No ${attTab} found</div>`;
+  }).join('') || `<div style="padding:24px;color:var(--text-muted);grid-column:1/-1;text-align:center">No members found</div>`;
 }
+
+/* Toggle Others exercise checkbox — shows text input box */
+function toggleOthersExercise(date, memberId, isChecked) {
+  const rec = getAttRecord(date);
+  if (!rec.exercises) rec.exercises = {};
+  if (!rec.exercises[memberId]) rec.exercises[memberId] = [];
+  if (!rec.exerciseNotes) rec.exerciseNotes = {};
+
+  const inputBox = document.getElementById(`others-input-${memberId}`);
+  if (isChecked) {
+    if (!rec.exercises[memberId].includes('Others')) rec.exercises[memberId].push('Others');
+    if (inputBox) inputBox.style.display = 'flex';
+    // Enable present button
+    const presentBtn = document.getElementById(`present-btn-${memberId}`);
+    if (presentBtn) { presentBtn.disabled = false; presentBtn.style.opacity = '1'; presentBtn.style.cursor = 'pointer'; presentBtn.title = 'Present'; }
+    // Auto-mark present
+    rec.members = rec.members || {};
+    rec.members[memberId] = 'present';
+    const card = document.getElementById(`att-card-${memberId}`);
+    if (card) { card.className = 'att-card present'; }
+    const btns = card && card.querySelectorAll('.att-btn');
+    if (btns) { btns[0].className='att-btn present'; btns[1].className='att-btn'; btns[2].className='att-btn'; }
+  } else {
+    rec.exercises[memberId] = rec.exercises[memberId].filter(e => e !== 'Others');
+    delete rec.exerciseNotes[memberId];
+    if (inputBox) inputBox.style.display = 'none';
+    const textEl = document.getElementById(`others-text-${memberId}`);
+    if (textEl) textEl.value = '';
+    // Disable present if no other exercises
+    if (rec.exercises[memberId].length === 0) {
+      const presentBtn = document.getElementById(`present-btn-${memberId}`);
+      if (presentBtn) { presentBtn.disabled = true; presentBtn.style.opacity = '.35'; presentBtn.style.cursor = 'not-allowed'; presentBtn.title = 'Tick at least 1 exercise first'; }
+    }
+  }
+  dbEnqueue('attendance', {id: date, data: attendanceStore[date]});
+  renderAttendanceSummary(date);
+}
+
+/* Save the free-text exercise name typed in Others box */
+function saveOthersText(date, memberId, text) {
+  const rec = getAttRecord(date);
+  if (!rec.exerciseNotes) rec.exerciseNotes = {};
+  rec.exerciseNotes[memberId] = text;
+  dbEnqueue('attendance', {id: date, data: attendanceStore[date]});
+}
+
 
 /* Toggle a single exercise checkbox for a member */
 function toggleExercise(date, memberId, exercise, isChecked) {
@@ -3299,6 +3406,7 @@ function openAddMemberModal(plan=null, price=null) {
   document.getElementById('member-modal-title').textContent='➕ Add New Member';
   document.getElementById('member-modal-save').textContent='Save Member';
   // Reset form
+  document.getElementById('f-custom-id').value='';
   document.getElementById('f-name').value='';
   document.getElementById('f-phone').value='';
   document.getElementById('f-notes').value='';
@@ -3330,6 +3438,7 @@ function editMember(id) {
   editingMemberId=id;
   document.getElementById('member-modal-title').textContent='✏️ Edit Member';
   document.getElementById('member-modal-save').textContent='Update Member';
+  document.getElementById('f-custom-id').value=m.customId||'';
   document.getElementById('f-name').value=m.name;
   document.getElementById('f-phone').value=m.phone||'';
   document.getElementById('f-notes').value=m.notes||'';
@@ -3389,44 +3498,55 @@ function initExCatSelector(cat) {
 
 
 function saveMember() {
-  const name  = document.getElementById('f-name').value.trim();
-  const phone = document.getElementById('f-phone').value.trim();
-  const join  = document.getElementById('f-join').value;
-  const expiry= document.getElementById('f-expiry').value;
-  const paid  = document.getElementById('f-paid').value;
+  const customId = document.getElementById('f-custom-id').value.trim().toUpperCase();
+  const name     = document.getElementById('f-name').value.trim();
+  const phone    = document.getElementById('f-phone').value.trim();
+  const join     = document.getElementById('f-join').value;
+  const expiry   = document.getElementById('f-expiry').value;
+  const paid     = document.getElementById('f-paid').value;
 
-  // Full validation — all required fields
-  if (!name)   { showToast('⚠ Full name is required.', true); document.getElementById('f-name').focus(); return; }
-  if (!phone)  { showToast('⚠ Phone number is required.', true); document.getElementById('f-phone').focus(); return; }
-  if (!join)   { showToast('⚠ Join date is required.', true); return; }
-  if (!expiry) { showToast('⚠ Expiry date is required.', true); return; }
-  if (!paid)   { showToast('⚠ Fee paid amount is required.', true); document.getElementById('f-paid').focus(); return; }
-  if (!selExCat){ showToast('⚠ Exercise category is required.', true); return; }
-  const planType=selPlanVal.includes('Cardio')?'Cardio':'Strength';
-  const obj={
+  // Full validation — every field required
+  if (!customId) { showToast('⚠ Member ID is required (e.g. ASF001).', true); document.getElementById('f-custom-id').focus(); return; }
+  if (!name)     { showToast('⚠ Full name is required.', true); document.getElementById('f-name').focus(); return; }
+  if (!phone)    { showToast('⚠ Phone number is required.', true); document.getElementById('f-phone').focus(); return; }
+  if (!join)     { showToast('⚠ Join date is required.', true); return; }
+  if (!expiry)   { showToast('⚠ Expiry date is required.', true); return; }
+  if (!paid)     { showToast('⚠ Fee paid amount is required.', true); document.getElementById('f-paid').focus(); return; }
+  if (!selExCat) { showToast('⚠ Exercise category is required.', true); return; }
+
+  // Check for duplicate custom ID (only on new members)
+  if (!editingMemberId) {
+    const dup = memberStore.find(m => (m.customId || '').toUpperCase() === customId);
+    if (dup) { showToast(`⚠ Member ID "${customId}" is already used by ${dup.name}.`, true); document.getElementById('f-custom-id').focus(); return; }
+  }
+
+  const planType = selPlanVal.includes('Cardio') ? 'Cardio' : 'Strength';
+  const obj = {
+    customId,
     name, expiry, planType,
-    plan:document.getElementById('f-plan').value||selPlanVal,
-    duration:selDurLabel, durationMonths:selDurMonths,
-    joinDate:document.getElementById('f-join').value,
-    paid:parseInt(document.getElementById('f-paid').value)||calcTotalFee(),
-    phone:document.getElementById('f-phone').value.trim(),
-    method:document.getElementById('f-method').value,
-    notes:document.getElementById('f-notes').value.trim(),
-    avatar:initials(name),
+    plan: document.getElementById('f-plan').value || selPlanVal,
+    duration: selDurLabel, durationMonths: selDurMonths,
+    joinDate: document.getElementById('f-join').value,
+    paid: parseInt(document.getElementById('f-paid').value) || calcTotalFee(),
+    phone: document.getElementById('f-phone').value.trim(),
+    method: document.getElementById('f-method').value,
+    notes: document.getElementById('f-notes').value.trim(),
+    avatar: initials(name),
     exerciseCategory: document.getElementById('f-ex-cat').value || selExCat || 'A',
   };
-  if(editingMemberId){
-    const i=memberStore.findIndex(m=>m.id===editingMemberId);
-    if(i>=0){memberStore[i]={...memberStore[i],...obj};dbEnqueue('members',memberStore[i]);showToast(`✅ ${name} updated!`);}
+
+  if (editingMemberId) {
+    const i = memberStore.findIndex(m => m.id === editingMemberId);
+    if (i >= 0) { memberStore[i] = {...memberStore[i], ...obj}; dbEnqueue('members', memberStore[i]); showToast(`✅ ${name} updated!`); }
   } else {
-    const nm={id:memberIdCtr++,...obj};
+    const nm = {id: memberIdCtr++, ...obj};
     memberStore.push(nm);
-    dbEnqueue('members',nm);
-    showToast(`✅ ${name} enrolled in ${selPlanVal} (${selDurLabel})!`);
+    dbEnqueue('members', nm);
+    showToast(`✅ ${name} (${customId}) enrolled in ${selPlanVal} (${selDurLabel})!`);
   }
   closeMemberModal();
   renderKPIs(); renderDashTable(); renderAlerts(); rebuildDashCharts();
-  if(document.getElementById('page-members').classList.contains('active')){renderMembersTable();renderMemberStats();}
+  if (document.getElementById('page-members').classList.contains('active')) { renderMembersTable(); renderMemberStats(); }
 }
 
 /* ════════════════════════════════════════
