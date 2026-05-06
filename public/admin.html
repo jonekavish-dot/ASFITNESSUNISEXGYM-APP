@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔐 A.S. Fitness — Admin Portal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230b0e0c'/><text y='72' x='50' text-anchor='middle' font-size='52' font-family='Arial Black,sans-serif' font-weight='900' fill='%234da6ff'>AS</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<style>
+:root{
+  --bg:#07090a;--bg-panel:#0d1117;--bg-card:#111620;--bg-hover:#161c26;
+  --border:#1e2535;--accent:#4da6ff;--accent-dim:#1a4a80;--accent-glow:rgba(77,166,255,.15);
+  --warn:#f5a623;--danger:#e53935;--success:#39e56a;
+  --text-primary:#e8edf5;--text-muted:#6b7d96;--text-label:#374357;
+  --font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;
+  --r:10px;--r-lg:14px;--tr:.2s ease;
+  --shadow-sm:0 1px 4px rgba(0,0,0,.5);--shadow-md:0 4px 16px rgba(0,0,0,.6);--shadow-lg:0 8px 32px rgba(0,0,0,.7);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);min-height:100vh;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:rgba(77,166,255,.2);border-radius:4px}
+
+/* ── LOCK SCREEN ── */
+#lockscreen{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(77,166,255,.08) 0%,var(--bg) 60%);z-index:9999;display:flex;align-items:center;justify-content:center}
+.lock-box{background:linear-gradient(145deg,#111620,#0d1117);border:1px solid rgba(77,166,255,.2);border-radius:18px;padding:44px 40px;width:400px;max-width:95vw;text-align:center;box-shadow:var(--shadow-lg),0 0 60px rgba(77,166,255,.08)}
+.lock-logo{font-family:var(--font-d);font-size:13px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.lock-brand{font-family:var(--font-d);font-size:36px;font-weight:900;letter-spacing:.05em;background:linear-gradient(135deg,#4da6ff,#7bc8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 16px rgba(77,166,255,.4));line-height:1;margin-bottom:6px}
+.lock-sub{font-size:10px;color:var(--text-muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:32px}
+.lock-label{display:block;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);text-align:left;margin-bottom:6px}
+.lock-field{position:relative;margin-bottom:12px}
+.lock-input{width:100%;background:rgba(77,166,255,.05);border:1px solid rgba(77,166,255,.15);border-radius:9px;padding:12px 42px 12px 14px;font-family:var(--font-b);font-size:14px;color:var(--text-primary);outline:none;transition:all var(--tr);letter-spacing:.05em}
+.lock-input:focus{border-color:rgba(77,166,255,.5);box-shadow:0 0 0 3px rgba(77,166,255,.1),0 0 20px rgba(77,166,255,.08);background:rgba(77,166,255,.08)}
+.lock-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:var(--text-muted);user-select:none;transition:color var(--tr)}
+.lock-eye:hover{color:var(--accent)}
+.lock-btn{width:100%;background:linear-gradient(135deg,#4da6ff,#2b7dd4);color:#07090a;border:none;border-radius:9px;padding:13px;font-family:var(--font-b);font-size:14px;font-weight:700;cursor:pointer;transition:all var(--tr);margin-top:6px;letter-spacing:.03em;box-shadow:0 4px 20px rgba(77,166,255,.3)}
+.lock-btn:hover{background:linear-gradient(135deg,#6db8ff,#4da6ff);transform:translateY(-1px);box-shadow:0 6px 24px rgba(77,166,255,.45)}
+.lock-err{color:var(--danger);font-size:12px;margin-top:8px;min-height:16px}
+.lock-hint{font-size:11px;color:var(--text-label);margin-top:10px;min-height:16px;transition:opacity .4s}
+.lock-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.15);border-radius:20px;padding:4px 12px;font-size:10px;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin-bottom:24px}
+@keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-8px)}30%{transform:translateX(8px)}45%{transform:translateX(-6px)}60%{transform:translateX(6px)}75%{transform:translateX(-3px)}90%{transform:translateX(3px)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── LAYOUT ── */
+.layout{display:flex;flex:1}
+.sidebar{width:230px;min-height:100vh;background:linear-gradient(180deg,#0b0f16 0%,#0d1117 100%);border-right:1px solid rgba(77,166,255,.08);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0}
+.sb-logo{padding:22px 18px 16px;border-bottom:1px solid rgba(77,166,255,.08)}
+.sb-brand{font-family:var(--font-d);font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px}
+.sb-title{font-family:var(--font-d);font-size:20px;font-weight:900;letter-spacing:.04em;background:linear-gradient(135deg,#4da6ff,#7bc8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.sb-sub{font-size:9px;color:var(--text-label);letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
+.sb-nav{padding:14px 10px;flex:1}
+.nav-sec{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-label);padding:0 8px 6px;margin-top:12px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);transition:all .18s ease;margin-bottom:1px;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:rgba(77,166,255,.07);color:var(--text-primary);transform:translateX(3px)}
+.nav-item.active{background:linear-gradient(135deg,rgba(77,166,255,.18),rgba(77,166,255,.08));color:var(--accent);border:1px solid rgba(77,166,255,.15)}
+.nav-item .ni{width:15px;text-align:center;font-size:14px;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;background:rgba(229,57,53,.15);color:var(--danger);border:1px solid rgba(229,57,53,.3)}
+.dev-card{margin:10px;padding:14px;background:linear-gradient(135deg,rgba(77,166,255,.1),rgba(77,166,255,.04));border:1px solid rgba(77,166,255,.2);border-radius:var(--r)}
+.dev-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4da6ff,#2b7dd4);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:15px;font-weight:900;color:#07090a;margin-bottom:8px;box-shadow:0 0 0 3px rgba(77,166,255,.2),0 0 16px rgba(77,166,255,.15)}
+.dev-name{font-family:var(--font-d);font-size:15px;font-weight:800;color:var(--text-primary);letter-spacing:.03em;line-height:1}
+.dev-role{font-size:9px;color:var(--accent);font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.dev-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.dev-badge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;letter-spacing:.05em;text-transform:uppercase;background:rgba(77,166,255,.08);color:var(--accent);border:1px solid rgba(77,166,255,.2)}
+.sb-foot{padding:12px 14px;border-top:1px solid rgba(77,166,255,.06);font-size:10px;color:var(--text-label)}
+
+/* ── TOPBAR ── */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{background:rgba(13,17,23,.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(77,166,255,.08);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:10;flex-shrink:0;box-shadow:0 2px 20px rgba(0,0,0,.4)}
+.tb-left h2{font-family:var(--font-d);font-size:18px;font-weight:700;letter-spacing:.03em;background:linear-gradient(135deg,#e8edf5,#8aa8c8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tb-left .dateline{font-size:10px;color:var(--text-muted);margin-top:1px}
+.tb-right{display:flex;align-items:center;gap:10px}
+.live-badge{display:flex;align-items:center;gap:5px;background:rgba(77,166,255,.1);border:1px solid rgba(77,166,255,.25);color:var(--accent);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:20px}
+.live-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 1.6s ease infinite;box-shadow:0 0 6px var(--accent)}
+.fb-indicator{display:flex;align-items:center;gap:7px;padding:5px 11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;font-size:11px;font-weight:600;color:var(--text-muted)}
+.fb-dot{width:7px;height:7px;border-radius:50%;background:var(--text-label);flex-shrink:0;transition:background .3s}
+.fb-dot.ok{background:var(--success)}
+.fb-dot.err{background:var(--danger)}
+.fb-dot.connecting{background:var(--warn);animation:pulse 1s ease infinite}
+.gym-tag{display:flex;align-items:center;gap:7px;padding:5px 10px;background:rgba(57,229,106,.07);border:1px solid rgba(57,229,106,.15);border-radius:7px;font-size:11px;font-weight:600;color:#39e56a}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;font-family:var(--font-b);font-size:12px;font-weight:600;transition:all .18s ease}
+.btn-primary{background:linear-gradient(135deg,#4da6ff,#2b7dd4);color:#07090a;font-weight:700;box-shadow:0 2px 12px rgba(77,166,255,.3)}
+.btn-primary:hover{background:linear-gradient(135deg,#6db8ff,#4da6ff);transform:translateY(-1px);box-shadow:0 4px 18px rgba(77,166,255,.4)}
+.btn-ghost{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--text-muted)}
+.btn-ghost:hover{background:rgba(77,166,255,.08);border-color:rgba(77,166,255,.25);color:var(--accent)}
+.btn-danger{background:rgba(229,57,53,.1);border:1px solid rgba(229,57,53,.25);color:var(--danger)}
+.btn-danger:hover{background:rgba(229,57,53,.2);box-shadow:0 0 12px rgba(229,57,53,.15)}
+.btn-success{background:rgba(57,229,106,.1);border:1px solid rgba(57,229,106,.25);color:var(--success)}
+.btn-success:hover{background:rgba(57,229,106,.2)}
+.btn-warn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.25);color:var(--warn)}
+.btn-sm{padding:5px 9px;font-size:11px;border-radius:6px}
+.btn-xs{padding:3px 7px;font-size:10px;border-radius:5px}
+
+/* ── PAGES ── */
+.page{display:none;padding:22px 26px;overflow-y:auto;flex:1;animation:pageIn .25s ease}
+.page.active{display:block}
+
+/* ── SECTION TITLE ── */
+.sec-title{font-family:var(--font-d);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text-label);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(77,166,255,.15),transparent)}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{background:linear-gradient(145deg,#111620,#0d1117);border:1px solid rgba(255,255,255,.05);border-radius:var(--r);padding:16px;position:relative;overflow:hidden;transition:all var(--tr);box-shadow:var(--shadow-sm)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--card-accent,rgba(77,166,255,.3)),transparent)}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.kpi-lbl{font-size:9.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.kpi-val{font-family:var(--font-d);font-size:30px;font-weight:900;color:var(--text-primary);line-height:1;letter-spacing:-.01em}
+.kpi-sub{margin-top:6px;font-size:10px;color:var(--text-muted)}
+
+/* ── PANEL ── */
+.panel{background:linear-gradient(145deg,#111620,#0d1117);border:1px solid rgba(255,255,255,.05);border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow-sm);margin-bottom:16px}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.panel-ttl{font-family:var(--font-d);font-size:14px;font-weight:700;letter-spacing:.04em}
+
+/* ── PILLS ── */
+.pill{font-size:9px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.06em;text-transform:uppercase}
+.pill-blue{background:rgba(77,166,255,.12);color:var(--accent);border:1px solid rgba(77,166,255,.25)}
+.pill-green{background:rgba(57,229,106,.1);color:var(--success);border:1px solid rgba(57,229,106,.2)}
+.pill-danger{background:rgba(229,57,53,.1);color:var(--danger);border:1px solid rgba(229,57,53,.2)}
+.pill-warn{background:rgba(245,166,35,.1);color:var(--warn);border:1px solid rgba(245,166,35,.2)}
+
+/* ── TABLE ── */
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{background:rgba(77,166,255,.04);color:var(--text-label);font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:9px 11px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.data-table td{padding:10px 11px;border-bottom:1px solid rgba(30,37,53,.8);color:var(--text-primary)}
+.data-table tr:hover td{background:rgba(77,166,255,.04)}
+.data-table tr{transition:background var(--tr)}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:linear-gradient(145deg,#111620,#0d1117);border:1px solid rgba(77,166,255,.15);border-radius:var(--r-lg);padding:26px;width:480px;max-width:96vw;max-height:92vh;overflow-y:auto;animation:slideIn .2s ease;box-shadow:var(--shadow-lg)}
+.modal h3{font-family:var(--font-d);font-size:19px;font-weight:700;margin-bottom:18px;letter-spacing:.03em;background:linear-gradient(135deg,#e8edf5,#8aa8c8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 11px;font-family:var(--font-b);font-size:13px;color:var(--text-primary);outline:none;transition:all var(--tr)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:rgba(77,166,255,.5);box-shadow:0 0 0 3px rgba(77,166,255,.08)}
+.form-group select option{background:#111620}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* ── FIREBASE CONFIG ── */
+.fb-config-card{background:rgba(77,166,255,.05);border:1px solid rgba(77,166,255,.15);border-radius:10px;padding:14px;margin-bottom:14px}
+.fb-config-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(30,37,53,.6);font-size:12px}
+.fb-config-row:last-child{border-bottom:none}
+.fb-config-key{color:var(--text-muted);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;width:130px}
+.fb-config-val{color:var(--accent);font-family:monospace;font-size:11px;word-break:break-all;text-align:right}
+
+/* ── FIREBASE SETUP STEPS ── */
+.fb-setup-step{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(77,166,255,.04);border:1px solid rgba(77,166,255,.1);border-radius:8px;margin-bottom:8px;font-size:12px;color:var(--text-muted);line-height:1.6}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#07090a;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-num.done{background:var(--success)}
+.step-num.err{background:var(--danger)}
+
+/* ── LOG ENTRIES ── */
+.log-entry{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:6px;font-size:11.5px;font-family:monospace;margin-bottom:4px;border-left:3px solid}
+.log-entry.info{background:rgba(77,166,255,.05);border-color:var(--accent)}
+.log-entry.success{background:rgba(57,229,106,.05);border-color:var(--success)}
+.log-entry.warn{background:rgba(245,166,35,.05);border-color:var(--warn)}
+.log-entry.error{background:rgba(229,57,53,.05);border-color:var(--danger)}
+.log-time{color:var(--text-label);flex-shrink:0}
+.log-msg{color:var(--text-primary)}
+.log-wrap{max-height:280px;overflow-y:auto;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:8px}
+
+/* ── USER LIST ── */
+.user-row{display:flex;align-items:center;gap:12px;padding:11px 14px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:9px;margin-bottom:8px;transition:all var(--tr)}
+.user-row:hover{background:rgba(77,166,255,.05);border-color:rgba(77,166,255,.15)}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#4da6ff,#2b7dd4);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:13px;font-weight:900;color:#07090a;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-email{font-size:13px;font-weight:600;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-meta{font-size:10px;color:var(--text-muted);margin-top:2px}
+.user-role{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase}
+.role-admin{background:rgba(77,166,255,.12);color:var(--accent);border:1px solid rgba(77,166,255,.2)}
+.role-owner{background:rgba(57,229,106,.1);color:var(--success);border:1px solid rgba(57,229,106,.2)}
+.role-staff{background:rgba(245,166,35,.1);color:var(--warn);border:1px solid rgba(245,166,35,.2)}
+
+/* ── RULE EDITOR ── */
+.rule-editor{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:9px;padding:14px;font-family:monospace;font-size:12px;color:#a8d8ff;line-height:1.7;white-space:pre;overflow-x:auto;margin-bottom:12px}
+.rule-editor:focus{outline:none;border-color:rgba(77,166,255,.4);box-shadow:0 0 0 3px rgba(77,166,255,.06)}
+
+/* ── STATUS INDICATOR ── */
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.status-dot.green{background:var(--success)}
+.status-dot.red{background:var(--danger)}
+.status-dot.yellow{background:var(--warn);animation:pulse 1.5s ease infinite}
+.status-dot.grey{background:var(--text-label)}
+
+/* ── TOGGLE ── */
+.toggle{position:relative;width:34px;height:19px;background:var(--border);border-radius:10px;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent-dim)}
+.toggle::after{content:'';position:absolute;width:13px;height:13px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s}
+.toggle.on::after{transform:translateX(15px)}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(30,37,53,.6)}
+.setting-row:last-child{border-bottom:none}
+.setting-lbl{font-size:13px;font-weight:500;color:var(--text-primary)}
+.setting-desc{font-size:10.5px;color:var(--text-muted);margin-top:1px}
+
+/* ── DEPLOY CARD ── */
+.deploy-card{background:linear-gradient(135deg,rgba(77,166,255,.08),rgba(77,166,255,.03));border:1px solid rgba(77,166,255,.2);border-radius:12px;padding:18px;margin-bottom:12px}
+.deploy-version{font-family:var(--font-d);font-size:28px;font-weight:900;color:var(--accent);letter-spacing:.05em}
+.deploy-date{font-size:11px;color:var(--text-muted);margin-top:3px}
+.deploy-status{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;font-weight:600}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:22px;right:22px;background:linear-gradient(135deg,#111620,#0d1117);border:1px solid rgba(77,166,255,.25);color:var(--accent);padding:11px 16px;border-radius:10px;font-size:12.5px;font-weight:500;z-index:200;transform:translateY(18px);opacity:0;transition:all .3s ease;pointer-events:none;max-width:300px;box-shadow:var(--shadow-md),0 0 20px rgba(77,166,255,.1)}
+#toast.show{opacity:1;transform:translateY(0)}
+#toast.toast-err{border-color:rgba(229,57,53,.3);color:var(--danger)}
+#toast.toast-ok{border-color:rgba(57,229,106,.3);color:var(--success)}
+
+/* ── FOOTER ── */
+.footer-bar{border-top:1px solid rgba(77,166,255,.06);padding:10px 26px;display:flex;justify-content:space-between;font-size:10px;color:var(--text-label);background:rgba(13,17,23,.8);flex-shrink:0}
+
+/* ── METRIC PROGRESS ── */
+.metric-bar{height:6px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-top:6px}
+.metric-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.metric-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px}
+
+/* ── COLLECTION VIEWER ── */
+.collection-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.col-tab{padding:6px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:11.5px;font-weight:600;cursor:pointer;transition:all var(--tr)}
+.col-tab.active{background:rgba(77,166,255,.12);border-color:rgba(77,166,255,.3);color:var(--accent)}
+.json-viewer{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:11px;color:#a8d8ff;max-height:320px;overflow:auto;line-height:1.6}
+.json-key{color:#79b8ff}
+.json-str{color:#9ecbff}
+.json-num{color:#79c0ff}
+.json-bool{color:#f97583}
+
+/* ── ALERT ROWS ── */
+.alert-row{padding:10px 12px;border-radius:8px;margin-bottom:6px;font-size:12.5px;border-left:3px solid;line-height:1.5}
+.alert-row.danger{background:rgba(229,57,53,.07);border-color:var(--danger);color:var(--text-primary)}
+.alert-row.warn{background:rgba(245,166,35,.07);border-color:var(--warn);color:var(--text-primary)}
+
+/* ── STATUS BADGES ── */
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.status-active{background:rgba(57,229,106,.12);color:#39e56a;border:1px solid rgba(57,229,106,.2)}
+.status-expiring{background:rgba(245,166,35,.12);color:var(--warn);border:1px solid rgba(245,166,35,.2)}
+.status-expired{background:rgba(229,57,53,.12);color:var(--danger);border:1px solid rgba(229,57,53,.2)}
+
+/* ── PAGER ── */
+.pag-btn{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:11px;transition:all var(--tr);display:inline-flex;align-items:center;justify-content:center}
+.pag-btn:hover,.pag-btn.active{background:rgba(77,166,255,.12);border-color:rgba(77,166,255,.3);color:var(--accent)}
+.pag-btn:disabled{opacity:.3;cursor:not-allowed}
+
+/* ── EXERCISE / ATTENDANCE CHARTS ── */
+.cat-stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.cat-stat-card{background:linear-gradient(145deg,#111620,#0d1117);border:1px solid rgba(255,255,255,.05);border-radius:var(--r);padding:13px;transition:transform var(--tr)}
+.cat-stat-card:hover{transform:translateY(-2px)}
+.cat-letter{font-family:var(--font-d);font-size:32px;font-weight:900;line-height:1;color:var(--accent)}
+.cat-count{font-family:var(--font-d);font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px}
+.cat-members{font-size:10px;color:var(--text-muted)}
+.cat-bar-wrap{height:5px;background:rgba(77,166,255,.1);border-radius:4px;margin-top:8px;overflow:hidden}
+.cat-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),rgba(77,166,255,.6));transition:width .6s ease}
+.ex-list-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;background:rgba(255,255,255,.03);margin-bottom:5px;font-size:12px;color:var(--text-primary)}
+.ex-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--accent)}
+.ex-count-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(77,166,255,.1);color:var(--accent)}
+.att-exercise-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:6px;font-size:12.5px}
+.att-exercise-count{font-family:var(--font-d);font-size:18px;font-weight:900;color:var(--accent);flex-shrink:0;width:36px;text-align:center}
+.att-exercise-name{flex:1;color:var(--text-primary)}
+.att-exercise-bar-wrap{width:100px;height:6px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.att-exercise-bar{height:100%;border-radius:4px;background:var(--accent);transition:width .5s ease}
+
+/* ══════════════════════════════════════════════════════════
+   ADMIN PORTAL — RESPONSIVE
+══════════════════════════════════════════════════════════ */
+/* ── Mobile bottom nav ── */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--bg-panel);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.5)}
+.mob-nav-row{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+.mob-nbtn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;border:none;background:none;cursor:pointer;border-radius:9px;color:var(--text-muted);transition:all .18s;font-family:var(--font-b)}
+.mob-nbtn.active{color:var(--accent);background:rgba(77,166,255,.1)}
+.mob-nbtn .mni{font-size:18px;line-height:1}
+.mob-nbtn .mnl{font-size:9px;font-weight:600}
+.admin-hamburger{display:none;background:none;border:none;color:var(--text-muted);font-size:22px;padding:6px;cursor:pointer;border-radius:8px;line-height:1}
+
+/* ── Tablet 900px ── */
+@media(max-width:900px){
+  .sidebar{display:none}
+  .admin-hamburger{display:flex}
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .page{padding:16px}
+  .topbar{padding:0 14px}
+  .cat-stats-grid{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ── Mobile 600px ── */
+@media(max-width:600px){
+  .main{padding-bottom:72px}
+  .mob-nav{display:block}
+  .page{padding:11px 11px 80px}
+  .topbar{padding:0 11px;height:52px}
+  .tb-left h2{font-size:15px}
+  .tb-left .dateline{display:none}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .kpi-card{padding:12px}
+  .kpi-val{font-size:20px}
+  .panel{padding:12px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .data-table{min-width:540px;font-size:11px}
+  .data-table th,.data-table td{padding:7px 7px;white-space:nowrap}
+  .col-hide-mob{display:none}
+  .cat-stats-grid{grid-template-columns:repeat(2,1fr)}
+  .att-exercise-bar-wrap{display:none}
+  .fb-config-row{flex-direction:column;align-items:flex-start;gap:3px}
+  .fb-config-val{text-align:left}
+  .panel-hdr{flex-wrap:wrap;gap:6px}
+  .collection-tabs{gap:4px}
+  .col-tab{padding:5px 10px;font-size:11px}
+  .profile-grid{grid-template-columns:1fr}
+  /* Modal mobile */
+  .modal{border-radius:16px 16px 0 0;position:fixed;bottom:0;left:0;right:0;width:100%!important;max-width:100%!important}
+  .modal-overlay{align-items:flex-end}
+  .form-row{grid-template-columns:1fr}
+  /* Dashboard */
+  .dash-panels{grid-template-columns:1fr!important}
+  .recent-table-wrap{overflow-x:auto}
+  .live-badge,.gym-tag{display:none}
+  .fb-indicator{font-size:10px;padding:4px 8px}
+}
+
+@media(max-width:380px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .mob-nbtn .mnl{display:none}
+  .cat-stats-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lockscreen">
+  <div class="lock-box" style="width:360px">
+    <div class="lock-badge">🛡️ Developer Access Only</div>
+    <div style="text-align:center;margin-bottom:6px">
+      <svg width="64" height="64" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 16px rgba(77,166,255,.5))">
+        <rect width="100" height="100" rx="22" fill="#0b0e0c" stroke="#4da6ff" stroke-width="3"/>
+        <text y="72" x="50" text-anchor="middle" font-size="50" font-family="Arial Black,sans-serif" font-weight="900" fill="#4da6ff">AS</text>
+      </svg>
+    </div>
+    <div class="lock-logo">A.S. FITNESS</div>
+    <div class="lock-brand">ADMIN PORTAL</div>
+    <div class="lock-sub">Secure Access · Firebase Authentication</div>
+
+    <!-- Tab switcher: Firebase login vs local fallback -->
+    <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;margin-top:8px">
+      <button id="tab-firebase" onclick="switchLoginTab('firebase')"
+        style="flex:1;padding:7px;border:none;background:rgba(77,166,255,.15);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;transition:all .18s">
+        🔥 Firebase Login
+      </button>
+      <button id="tab-local" onclick="switchLoginTab('local')"
+        style="flex:1;padding:7px;border:none;background:transparent;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .18s">
+        🔑 Local Password
+      </button>
+    </div>
+
+    <!-- Firebase Email/Password Login -->
+    <div id="login-firebase">
+      <label class="lock-label">Email Address</label>
+      <div class="lock-field" style="margin-bottom:10px">
+        <input class="lock-input" type="email" id="login-email" placeholder="admin@asfitness.com"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()"
+          style="padding-right:12px">
+      </div>
+      <label class="lock-label">Password</label>
+      <div class="lock-field">
+        <input class="lock-input" type="password" id="login-password" placeholder="Firebase account password"
+          onkeydown="if(event.key==='Enter')firebaseLogin()">
+        <span class="lock-eye" onclick="togglePassVis('login-password',this)">👁</span>
+      </div>
+      <button class="lock-btn" onclick="firebaseLogin()" id="fb-login-btn">🔥 Sign In with Firebase</button>
+      <div style="text-align:center;margin-top:8px">
+        <button onclick="showForgotPassword()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;text-decoration:underline">Forgot password?</button>
+      </div>
+      <div class="lock-err" id="fb-login-err"></div>
+      <div style="background:rgba(77,166,255,.06);border:1px solid rgba(77,166,255,.1);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:10.5px;color:var(--text-muted);line-height:1.7">
+        <strong style="color:var(--accent)">ℹ️ First time?</strong> Create your Firebase account from
+        <strong style="color:var(--text-primary)">Gym Portal → Settings → Firebase Setup → Create Admin Account</strong>.
+        Multiple team members can each have their own login.
+      </div>
+    </div>
+
+    <!-- Local Password Fallback -->
+    <div id="login-local" style="display:none">
+      <label class="lock-label">Admin Password</label>
+      <div class="lock-field">
+        <input class="lock-input" type="password" id="admin-pass" placeholder="Enter local admin password"
+          onkeydown="if(event.key==='Enter')adminUnlock()">
+        <span class="lock-eye" id="admin-eye" onclick="toggleAdminPassVis()">👁</span>
+      </div>
+      <button class="lock-btn" onclick="adminUnlock()">🔓 Access Admin Portal</button>
+      <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:8px">
+        ⚠️ Local mode — device-specific. Use Firebase login for secure multi-device access.
+      </div>
+      <div class="lock-err" id="admin-err"></div>
+      <div class="lock-hint" id="admin-hint" style="opacity:0"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div id="forgot-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;align-items:center;justify-content:center">
+  <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:24px;width:320px;text-align:center">
+    <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px">🔑 Reset Password</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Enter your email and Firebase will send a reset link.</div>
+    <input type="email" id="reset-email" placeholder="your@email.com"
+      style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:7px;padding:9px 11px;color:var(--text-primary);font-size:13px;outline:none;margin-bottom:10px">
+    <div style="display:flex;gap:8px">
+      <button onclick="closeForgotPassword()" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--text-muted);cursor:pointer">Cancel</button>
+      <button onclick="sendPasswordReset()" style="flex:1;padding:9px;border:none;border-radius:7px;background:var(--accent);color:#07090a;font-weight:700;cursor:pointer">Send Reset</button>
+    </div>
+    <div id="reset-msg" style="font-size:11px;margin-top:8px;min-height:14px"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="layout" id="admin-app" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-brand">A.S. Fitness</div>
+      <div class="sb-title">ADMIN PORTAL</div>
+      <div class="sb-sub">Developer Control Panel</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nav-sec">Overview</div>
+      <button class="nav-item active" onclick="nav('dashboard',this)"><span class="ni">📊</span> Dashboard</button>
+
+      <div class="nav-sec">Gym Data</div>
+      <button class="nav-item" onclick="nav('members',this)"><span class="ni">👥</span> Members</button>
+      <button class="nav-item" onclick="nav('attendance',this)"><span class="ni">✅</span> Attendance</button>
+      <button class="nav-item" onclick="nav('trainers',this)"><span class="ni">🎽</span> Trainers</button>
+      <button class="nav-item" onclick="nav('analytics',this)"><span class="ni">📈</span> Analytics</button>
+
+      <div class="nav-sec">Account</div>
+      <button class="nav-item" onclick="nav('profile',this)"><span class="ni">🔐</span> Profile &amp; Security</button>
+    </nav>
+
+    <div class="dev-card">
+      <div class="dev-av">KS</div>
+      <div class="dev-name">Kavish S R</div>
+      <div class="dev-role">Developer · Admin</div>
+      <div class="dev-badges">
+        <span class="dev-badge">💻 Dev</span>
+        <span class="dev-badge">🎓 BIT CSE</span>
+        <span class="dev-badge">⚡ Admin</span>
+      </div>
+    </div>
+    <div class="sb-foot">Admin Portal v1.0 · A.S. Fitness</div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="tb-left">
+        <h2 id="page-title">ADMIN DASHBOARD</h2>
+        <div class="dateline" id="live-time">Loading…</div>
+      </div>
+      <div class="tb-right">
+        <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+        <div class="fb-indicator">
+          <div class="fb-dot" id="fb-dot"></div>
+          <span id="fb-indicator-text">Firebase: Checking…</span>
+        </div>
+        <input type="date" id="att-date-filter" style="background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:5px 9px;color:var(--text-primary);font-size:11.5px;outline:none" onchange="if(currentPage==='attendance')renderAttendancePage()">
+        <span id="topbar-user" style="font-size:10.5px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <button class="btn btn-ghost btn-sm" onclick="refreshAllData(this)" title="Reload data from Firestore">🔄 Refresh</button>
+        <button class="btn btn-danger btn-sm" onclick="adminLogout()">🔓 Logout</button>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: DASHBOARD ══ -->
+    <div id="page-dashboard" class="page active">
+      <div class="sec-title">System Overview</div>
+      <div class="kpi-grid" id="dash-kpis"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div class="panel">
+          <div class="panel-hdr"><span class="panel-ttl">⚠️ Alerts</span></div>
+          <div id="dash-alerts" style="font-size:12.5px;line-height:1.7"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-ttl">🔥 Firebase</span>
+            <span class="pill pill-blue" id="fb-status-pill">Checking…</span>
+          </div>
+          <div class="fb-config-row"><span class="fb-config-key">Status</span><span id="fb-conn-val" class="fb-config-val">—</span></div>
+          <div class="fb-config-row"><span class="fb-config-key">Project ID</span><span id="fb-proj-val" class="fb-config-val">—</span></div>
+          <div class="fb-config-row"><span class="fb-config-key">Members</span><span id="fb-m-count" class="fb-config-val">—</span></div>
+          <div class="fb-config-row"><span class="fb-config-key">Trainers</span><span id="fb-t-count" class="fb-config-val">—</span></div>
+          <div class="fb-config-row"><span class="fb-config-key">Total Revenue</span><span id="fb-revenue" class="fb-config-val">—</span></div>
+          <div class="fb-config-row"><span class="fb-config-key">Renewal Revenue</span><span id="fb-renew-rev" class="fb-config-val">—</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-ttl">Recent Members</span><button class="btn btn-ghost btn-sm" onclick="loadAllData().then(renderDashboard)">🔄 Refresh</button></div>
+        <table class="data-table">
+          <thead><tr><th>MID</th><th>Name</th><th>Plan</th><th>Expires</th><th>Status</th></tr></thead>
+          <tbody id="dash-recent-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: MEMBERS ══ -->
+    <div id="page-members" class="page">
+      <div class="sec-title">Members</div>
+      <div class="kpi-grid" id="members-kpis"></div>
+      <div class="panel">
+        <div class="panel-hdr">
+          <span class="panel-ttl">All Members</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="text" id="m-search" placeholder="Search name / plan…" oninput="renderMembersPage()"
+              style="background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;width:190px">
+            <select id="m-fstatus" onchange="renderMembersPage()"
+              style="background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;cursor:pointer">
+              <option value="">All Status</option>
+              <option>Active</option><option>Expiring</option><option>Expired</option>
+            </select>
+            <select id="m-fplan" onchange="renderMembersPage()"
+              style="background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;cursor:pointer">
+              <option value="">All Plans</option>
+              <option>Plan A Strength</option><option>Plan A Cardio</option>
+              <option>Plan B Strength</option><option>Plan B Cardio</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+        <table class="data-table" id="members-table">
+          <thead><tr>
+            <th>MID</th><th>Name</th><th>Plan</th><th class="col-hide-mob">Duration</th>
+            <th class="col-hide-mob">Joined</th><th>Expires</th><th>Total Paid</th><th class="col-hide-mob">Last Renewal</th><th class="col-hide-mob">Phone</th><th>Status</th>
+          </tr></thead>
+          <tbody id="members-tbody"></tbody>
+        </table>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 11px 0;font-size:11px;color:var(--text-muted)">
+          <span id="m-pginfo"></span>
+          <div style="display:flex;gap:3px" id="m-pgbtns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: ATTENDANCE ══ -->
+    <div id="page-attendance" class="page">
+      <div class="sec-title">Attendance</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:11.5px;font-weight:600;color:var(--text-muted)">📅 Date:</span>
+        <input type="date" id="att-page-date"
+          style="background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text-primary);font-size:12.5px;outline:none"
+          onchange="renderAttendancePage()">
+        <button class="btn btn-ghost btn-sm" onclick="gotoToday()" title="Go to today">📍 Today</button>
+        <div style="display:flex;gap:6px" id="att-summary-pills"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="panel">
+          <div class="panel-hdr"><span class="panel-ttl">👥 Members Attendance</span><span class="pill pill-blue" id="att-m-count">0</span></div>
+          <table class="data-table">
+            <thead><tr><th>MID</th><th>Name</th><th>Plan</th><th>Status</th></tr></thead>
+            <tbody id="att-members-tbody"></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><span class="panel-ttl">🎽 Trainers Attendance</span><span class="pill pill-blue" id="att-t-count">0</span></div>
+          <table class="data-table">
+            <thead><tr><th>TID</th><th>Name</th><th>Role</th><th>Status</th></tr></thead>
+            <tbody id="att-trainers-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: TRAINERS ══ -->
+    <div id="page-trainers" class="page">
+      <div class="sec-title">Trainers</div>
+      <div class="kpi-grid" id="trainers-kpis"></div>
+      <div class="panel">
+        <div class="panel-hdr">
+          <span class="panel-ttl">All Trainers</span>
+          <input type="text" id="t-search" placeholder="Search name…" oninput="renderTrainersPage()"
+            style="background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;width:180px">
+        </div>
+        <div id="trainer-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px"></div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: PROFILE & SECURITY ══ -->
+    <div id="page-profile" class="page">
+      <div class="sec-title">Profile &amp; Security</div>
+      <div style="max-width:480px">
+        <div class="panel">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+            <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#4da6ff,#2b7dd4);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:18px;font-weight:900;color:#07090a;box-shadow:0 0 0 3px rgba(77,166,255,.2),0 0 18px rgba(77,166,255,.15)">KS</div>
+            <div>
+              <div style="font-family:var(--font-d);font-size:18px;font-weight:800;color:var(--text-primary)">Kavish S R</div>
+              <div style="font-size:9px;color:var(--accent);font-weight:600;letter-spacing:.1em;text-transform:uppercase">Developer · Admin · BIT CSE</div>
+            </div>
+          </div>
+
+          <div style="background:rgba(77,166,255,.06);border:1px solid rgba(77,166,255,.15);border-radius:9px;padding:12px 14px;margin-bottom:18px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px">🔐 Current Admin Password</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div id="admin-pass-display" style="font-family:monospace;font-size:16px;letter-spacing:.18em;color:var(--text-primary);filter:blur(5px);transition:filter .3s;user-select:none">••••••••••••</div>
+              <button class="btn btn-ghost btn-xs" onclick="toggleAdminPassDisplay()" id="admin-pass-reveal-btn">👁 Show</button>
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:5px">Protects this admin portal only.</div>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">Change Admin Password</div>
+          <div class="form-group"><label>Current Password</label>
+            <div style="position:relative">
+              <input type="password" id="ap-cur" placeholder="Your current admin password" style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 40px 9px 11px;font-family:var(--font-b);font-size:13px;color:var(--text-primary);outline:none;transition:all var(--tr)">
+              <span onclick="toggleFieldVis('ap-cur',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--text-muted)">👁</span>
+            </div>
+          </div>
+          <div class="form-group"><label>New Password</label>
+            <div style="position:relative">
+              <input type="password" id="ap-new" placeholder="Min. 6 characters" style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 40px 9px 11px;font-family:var(--font-b);font-size:13px;color:var(--text-primary);outline:none;transition:all var(--tr)">
+              <span onclick="toggleFieldVis('ap-new',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--text-muted)">👁</span>
+            </div>
+          </div>
+          <div class="form-group"><label>Confirm New Password</label>
+            <div style="position:relative">
+              <input type="password" id="ap-conf" placeholder="Repeat new password" onkeydown="if(event.key==='Enter')changeAdminPassword()" style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 40px 9px 11px;font-family:var(--font-b);font-size:13px;color:var(--text-primary);outline:none;transition:all var(--tr)">
+              <span onclick="toggleFieldVis('ap-conf',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--text-muted)">👁</span>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="changeAdminPassword()">🔐 Update Admin Password</button>
+          <div id="ap-msg" style="font-size:11.5px;margin-top:8px;min-height:16px;text-align:center"></div>
+        </div>
+
+        <div style="background:rgba(77,166,255,.04);border:1px solid rgba(77,166,255,.1);border-radius:10px;padding:14px 16px;font-size:12px;color:var(--text-muted);line-height:1.7">
+          <strong style="color:var(--accent)">ℹ️ Data sync</strong><br>
+          Member, attendance and trainer data is synced via <strong style="color:var(--text-primary)">Firebase Firestore</strong> — visible on any device that has the Firebase config saved.
+          The admin password only lives in this browser's <code style="background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px;font-size:11px;color:#9ecbff">localStorage</code> and is device-specific.
+          <br>To change Shankar's gym password, go to <strong style="color:#39e56a">Gym App → Settings → Security</strong>.
+        </div>
+
+        <!-- Manage Admin Users (Firebase Auth) -->
+        <div class="panel" style="margin-top:16px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">🔥 Firebase Admin Users</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">
+            Each person who needs access to this admin portal needs their own Firebase account.
+            Add their email here and they can log in from any device.
+          </div>
+          <div id="admin-users-list" style="margin-bottom:14px"></div>
+          <div class="form-group"><label>New Admin Email</label>
+            <input type="email" id="new-admin-email" placeholder="colleague@email.com"
+              style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 11px;font-family:var(--font-b);font-size:13px;color:var(--text-primary);outline:none">
+          </div>
+          <div class="form-group"><label>Temporary Password</label>
+            <input type="password" id="new-admin-pass" placeholder="Min. 6 characters (they can reset later)"
+              style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 11px;font-family:var(--font-b);font-size:13px;color:var(--text-primary);outline:none">
+          </div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="addAdminUser()">➕ Add Admin User</button>
+          <div id="admin-users-msg" style="font-size:11.5px;margin-top:8px;min-height:16px;text-align:center"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: ANALYTICS ══ -->
+    <div id="page-analytics" class="page">
+      <div class="sec-title">Exercise &amp; Attendance Analytics</div>
+
+      <!-- Category Distribution -->
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-ttl">Exercise Category Distribution</span><button class="btn btn-ghost btn-sm" onclick="renderAnalyticsPage()">🔄</button></div>
+        <div class="cat-stats-grid" id="admin-cat-grid"></div>
+      </div>
+
+      <!-- Exercise breakdown per category -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px" id="admin-ex-detail-grid">
+        <div class="panel">
+          <div class="panel-hdr"><span class="panel-ttl">Category Details</span></div>
+          <div id="admin-cat-detail"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><span class="panel-ttl">Most Done Exercises Today</span><span id="admin-att-date-pill" class="pill pill-blue"></span></div>
+          <div id="admin-ex-today"></div>
+        </div>
+      </div>
+
+      <!-- Attendance trend -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <span class="panel-ttl">Attendance by Category (Today)</span>
+        </div>
+        <div id="admin-att-by-cat"></div>
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <span>A.S. Fitness Admin Portal · Developer: <strong style="color:var(--accent)">Kavish S R</strong> · BIT CSE</span>
+      <span>Last sync: <span id="last-sync">—</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- INACTIVITY WARNING -->
+<div id="inactivity-warning" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;background:#111620;border:1px solid var(--warn);border-radius:12px;padding:14px 20px;box-shadow:0 8px 32px rgba(0,0,0,.6);text-align:center;min-width:280px">
+  <div style="font-size:13px;font-weight:700;color:var(--warn);margin-bottom:6px">⚠️ Still there?</div>
+  <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Logging out in <strong id="inactivity-countdown" style="color:var(--warn);font-size:15px">30</strong>s due to inactivity</div>
+  <button onclick="stayActive()" style="background:var(--accent);color:#07090a;border:none;border-radius:7px;padding:7px 20px;font-weight:700;font-size:12px;cursor:pointer;font-family:var(--font-b)">✅ Stay Logged In</button>
+</div>
+
+<!-- ADMIN MOBILE BOTTOM NAV -->
+<nav class="mob-nav" id="admin-mob-nav">
+  <div class="mob-nav-row">
+    <button class="mob-nbtn active" onclick="adminMobNav('dashboard',this)"><span class="mni">📊</span><span class="mnl">Home</span></button>
+    <button class="mob-nbtn" onclick="adminMobNav('members',this)"><span class="mni">👥</span><span class="mnl">Members</span></button>
+    <button class="mob-nbtn" onclick="adminMobNav('attendance',this)"><span class="mni">✅</span><span class="mnl">Attend</span></button>
+    <button class="mob-nbtn" onclick="adminMobNav('trainers',this)"><span class="mni">🎽</span><span class="mnl">Trainers</span></button>
+    <button class="mob-nbtn" onclick="adminMobNav('analytics',this)"><span class="mni">📈</span><span class="mnl">Analytics</span></button>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ════════════════════════════════════════
+   INACTIVITY AUTO-LOGOUT — 3 minutes
+════════════════════════════════════════ */
+const INACTIVITY_TIMEOUT = 3 * 60 * 1000;
+const INACTIVITY_WARNING = 2.5 * 60 * 1000;
+let _inactivityTimer   = null;
+let _inactivityWarn    = null;
+let _countdownInterval = null;
+let _inactivityActive  = false;
+
+function startInactivityTimer() {
+  _inactivityActive = true;
+  resetInactivityTimer();
+  ['mousemove','mousedown','keydown','touchstart','touchmove','scroll','click','wheel'].forEach(ev =>
+    document.addEventListener(ev, resetInactivityTimer, { passive: true })
+  );
+}
+
+function stopInactivityTimer() {
+  _inactivityActive = false;
+  clearTimeout(_inactivityTimer);
+  clearTimeout(_inactivityWarn);
+  clearInterval(_countdownInterval);
+  ['mousemove','mousedown','keydown','touchstart','touchmove','scroll','click','wheel'].forEach(ev =>
+    document.removeEventListener(ev, resetInactivityTimer)
+  );
+  const w = document.getElementById('inactivity-warning');
+  if (w) w.style.display = 'none';
+}
+
+function resetInactivityTimer() {
+  if (!_inactivityActive) return;
+  clearTimeout(_inactivityTimer);
+  clearTimeout(_inactivityWarn);
+  clearInterval(_countdownInterval);
+  const w = document.getElementById('inactivity-warning');
+  if (w) w.style.display = 'none';
+  _inactivityWarn  = setTimeout(showInactivityWarning, INACTIVITY_WARNING);
+  _inactivityTimer = setTimeout(() => {
+    clearInterval(_countdownInterval);
+    adminLogout(true);
+  }, INACTIVITY_TIMEOUT);
+}
+
+function showInactivityWarning() {
+  const w = document.getElementById('inactivity-warning');
+  if (!w) return;
+  w.style.display = 'flex';
+  let secs = 30;
+  const cEl = document.getElementById('inactivity-countdown');
+  if (cEl) cEl.textContent = secs;
+  _countdownInterval = setInterval(() => {
+    secs--;
+    if (cEl) cEl.textContent = secs;
+    if (secs <= 0) clearInterval(_countdownInterval);
+  }, 1000);
+}
+
+function stayActive() { resetInactivityTimer(); }
+
+/* ════════════════════════════════════════
+   CONSTANTS
+════════════════════════════════════════ */
+const ADMIN_PASS_KEY    = 'asfit_admin_pass';
+const DEFAULT_ADMIN_PASS = 'kavish@admin2026';
+const FB_CONFIG_KEY     = 'asfit_firebase';
+
+let failedAttempts = 0;
+let firestoreDB    = null;
+let firebaseAuthUser = null;
+let currentPage    = 'dashboard';
+
+// In-memory data (loaded from Firestore)
+let membersData    = [];
+let trainersData   = [];
+let attendanceData = {};
+
+// Pagination
+let mPage = 1; const M_PS = 15;
+
+/* ════════════════════════════════════════
+   CLOCK
+════════════════════════════════════════ */
+function updateClock() {
+  const now = new Date();
+  const el  = document.getElementById('live-time');
+  if (el) el.textContent = now.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) + ' · ' + now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const ls = document.getElementById('last-sync');
+  if (ls) ls.textContent = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+setInterval(updateClock, 1000);
+
+/* ════════════════════════════════════════
+   TOAST
+════════════════════════════════════════ */
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type === 'error' ? 'show toast-err' : type === 'ok' ? 'show toast-ok' : 'show';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = '', 3500);
+}
+
+/* ════════════════════════════════════════
+   UTILS
+════════════════════════════════════════ */
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function fmtDate(ds) { return ds ? new Date(ds).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'; }
+function daysDiff(ds) { return Math.ceil((new Date(ds) - new Date(todayStr())) / 86400000); }
+function getStatus(ds) {
+  const d = daysDiff(ds);
+  if (d < 0)   return {label:'Expired',  cls:'status-expired',  icon:'🔴'};
+  if (d <= 14) return {label:'Expiring', cls:'status-expiring', icon:'🟡'};
+  return              {label:'Active',   cls:'status-active',   icon:'🟢'};
+}
+const STATUS_COLORS = {present:'#39e56a', absent:'#e53935', late:'#f5a623', 'Not Marked':'#4d5c50'};
+function statusBadge(s) {
+  const label = s === 'present' ? '✅ Present' : s === 'absent' ? '❌ Absent' : s === 'late' ? '⏰ Late' : '⬜ Not Marked';
+  const color = STATUS_COLORS[s] || STATUS_COLORS['Not Marked'];
+  return `<span style="font-size:10px;font-weight:700;color:${color};letter-spacing:.04em">${label}</span>`;
+}
+
+/* ════════════════════════════════════════
+   LOGIN TAB SWITCHER
+════════════════════════════════════════ */
+function switchLoginTab(tab) {
+  const isFB = tab === 'firebase';
+  document.getElementById('login-firebase').style.display = isFB ? 'block' : 'none';
+  document.getElementById('login-local').style.display   = isFB ? 'none' : 'block';
+  const fbTab  = document.getElementById('tab-firebase');
+  const locTab = document.getElementById('tab-local');
+  fbTab.style.background  = isFB ? 'rgba(77,166,255,.15)' : 'transparent';
+  fbTab.style.color       = isFB ? 'var(--accent)' : 'var(--text-muted)';
+  locTab.style.background = isFB ? 'transparent' : 'rgba(255,255,255,.06)';
+  locTab.style.color      = isFB ? 'var(--text-muted)' : 'var(--text-primary)';
+}
+
+/* ════════════════════════════════════════
+   FIREBASE EMAIL AUTH
+════════════════════════════════════════ */
+async function firebaseLogin() {
+  const email    = (document.getElementById('login-email').value || '').trim();
+  const password = document.getElementById('login-password').value || '';
+  const errEl    = document.getElementById('fb-login-err');
+  const btn      = document.getElementById('fb-login-btn');
+  if (!email)    { errEl.textContent = '❌ Please enter your email.'; return; }
+  if (!password) { errEl.textContent = '❌ Please enter your password.'; return; }
+  btn.textContent = '⏳ Signing in…'; btn.disabled = true; errEl.textContent = '';
+  const cfg = getFirebaseConfig();
+  if (!cfg || !cfg.apiKey) {
+    errEl.textContent = '❌ Firebase not configured. Use Local Password or set up Firebase first.';
+    btn.textContent = '🔥 Sign In with Firebase'; btn.disabled = false; return;
+  }
+  try {
+    if (typeof firebase === 'undefined') throw new Error('Firebase SDK not loaded');
+    if (firebase.apps.length === 0) firebase.initializeApp(cfg);
+    else if (firebase.app().options.projectId !== cfg.projectId) {
+      await firebase.app().delete(); firebase.initializeApp(cfg);
+    }
+    const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+    firebaseAuthUser = cred.user;
+    firestoreDB = firebase.firestore();
+    try { await firestoreDB.enablePersistence({ synchronizeTabs: true }); } catch(pe) {}
+    btn.textContent = '✅ Signed in!';
+    setTimeout(() => enterAdminPortal(cred.user.email), 400);
+  } catch(e) {
+    btn.textContent = '🔥 Sign In with Firebase'; btn.disabled = false;
+    const code = e.code || '';
+    if (code === 'auth/user-not-found')          errEl.textContent = '❌ No account found for this email.';
+    else if (code === 'auth/wrong-password')     errEl.textContent = '❌ Incorrect password.';
+    else if (code === 'auth/invalid-email')      errEl.textContent = '❌ Invalid email address.';
+    else if (code === 'auth/invalid-credential') errEl.textContent = '❌ Wrong email or password.';
+    else if (code === 'auth/too-many-requests')  errEl.textContent = '❌ Too many attempts. Try again later.';
+    else if (code === 'auth/network-request-failed') errEl.textContent = '❌ No internet connection.';
+    else errEl.textContent = '❌ ' + (e.message || 'Sign-in failed.');
+  }
+}
+
+function checkAuthState() {
+  // SECURITY: Do NOT auto-bypass lock screen using cached Firebase auth state.
+  // Firebase persists auth in IndexedDB and onAuthStateChanged fires with cached users,
+  // which would bypass the login screen entirely on every page refresh.
+  // Authentication must always be explicitly performed by the user on each visit.
+  // The firebaseAuthUser flag is only set after explicit sign-in in this session.
+}
+
+function enterAdminPortal(email) {
+  sessionStorage.setItem('admin_auth_ok', '1');
+  document.getElementById('lockscreen').style.display = 'none';
+  document.getElementById('admin-app').style.display  = 'flex';
+  const userEl = document.getElementById('topbar-user');
+  if (userEl && email) userEl.textContent = '👤 ' + email;
+  updateClock();
+  startInactivityTimer();
+  initAdminApp();
+}
+
+function showForgotPassword() {
+  const ov = document.getElementById('forgot-overlay');
+  ov.style.display = 'flex';
+  const emailEl = document.getElementById('login-email');
+  const resetEl = document.getElementById('reset-email');
+  if (emailEl && resetEl) resetEl.value = emailEl.value;
+}
+function closeForgotPassword() {
+  document.getElementById('forgot-overlay').style.display = 'none';
+  document.getElementById('reset-msg').textContent = '';
+}
+async function sendPasswordReset() {
+  const email = (document.getElementById('reset-email').value || '').trim();
+  const msg   = document.getElementById('reset-msg');
+  if (!email) { msg.style.color='var(--danger)'; msg.textContent='Enter your email first.'; return; }
+  try {
+    await firebase.auth().sendPasswordResetEmail(email);
+    msg.style.color = 'var(--success)'; msg.textContent = '✅ Reset link sent! Check your inbox.';
+    setTimeout(closeForgotPassword, 3000);
+  } catch(e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + (e.message || 'Failed.');
+  }
+}
+function togglePassVis(inputId, btn) {
+  const el = document.getElementById(inputId); if (!el) return;
+  if (el.type === 'password') { el.type = 'text'; if(btn) btn.textContent='🙈'; }
+  else { el.type = 'password'; if(btn) btn.textContent='👁'; }
+}
+
+/* ════════════════════════════════════════
+   ADD / MANAGE ADMIN USERS
+════════════════════════════════════════ */
+async function addAdminUser() {
+  const email    = (document.getElementById('new-admin-email').value || '').trim();
+  const password = document.getElementById('new-admin-pass').value || '';
+  const msg      = document.getElementById('admin-users-msg');
+
+  // Validate inputs
+  if (!email)    { msg.style.color='var(--danger)'; msg.textContent='❌ Email address is required.'; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.style.color='var(--danger)'; msg.textContent='❌ Enter a valid email address.'; return; }
+  if (!password || password.length < 6) { msg.style.color='var(--danger)'; msg.textContent='❌ Password must be at least 6 characters.'; return; }
+
+  // Check Firebase connection
+  if (typeof firebase === 'undefined' || firebase.apps.length === 0) {
+    msg.style.color='var(--danger)';
+    msg.textContent='❌ Firebase is not connected. Sign in with Firebase Login first.';
+    return;
+  }
+  if (!firestoreDB) {
+    msg.style.color='var(--danger)';
+    msg.textContent='❌ Firebase is connected but Firestore is not ready. Try refreshing the page.';
+    return;
+  }
+
+  msg.style.color='var(--text-muted)'; msg.textContent='⏳ Creating account…';
+
+  try {
+    // Use a SECONDARY Firebase app instance so we don't sign out the current admin
+    const cfg = getFirebaseConfig();
+    const secondaryAppName = 'secondary-auth-' + Date.now();
+    let secondaryApp;
+    try {
+      secondaryApp = firebase.initializeApp(cfg, secondaryAppName);
+    } catch(appErr) {
+      throw new Error('Could not initialize secondary Firebase app: ' + appErr.message);
+    }
+
+    const secondaryAuth = secondaryApp.auth();
+    await secondaryAuth.createUserWithEmailAndPassword(email, password);
+    // Sign out from secondary app immediately — we don't need that session
+    await secondaryAuth.signOut();
+    // Delete the secondary app to clean up
+    await secondaryApp.delete();
+
+    // Save email to Firestore adminUsers list
+    await firestoreDB.collection('config').doc('adminUsers').set(
+      { users: firebase.firestore.FieldValue.arrayUnion(email) },
+      { merge: true }
+    );
+
+    document.getElementById('new-admin-email').value = '';
+    document.getElementById('new-admin-pass').value  = '';
+    msg.style.color = 'var(--success)';
+    msg.textContent = `✅ Account created for ${email}. They can now log in from any device.`;
+    loadAdminUsers();
+
+  } catch(e) {
+    msg.style.color = 'var(--danger)';
+    const code = e.code || '';
+    if (code === 'auth/email-already-in-use') msg.textContent = '❌ This email already has a Firebase account.';
+    else if (code === 'auth/invalid-email')   msg.textContent = '❌ Invalid email address format.';
+    else if (code === 'auth/weak-password')   msg.textContent = '❌ Password is too weak. Use at least 6 characters.';
+    else if (code === 'auth/network-request-failed') msg.textContent = '❌ No internet connection.';
+    else msg.textContent = '❌ ' + (e.message || 'Failed to create account.');
+  }
+}
+
+async function loadAdminUsers() {
+  const el = document.getElementById('admin-users-list');
+  if (!el || !firestoreDB) return;
+  try {
+    const doc = await firestoreDB.collection('config').doc('adminUsers').get();
+    const users = doc.exists ? (doc.data().users || []) : [];
+    el.innerHTML = users.length ? users.map(u => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:rgba(77,166,255,.05);border:1px solid rgba(77,166,255,.1);border-radius:7px;margin-bottom:6px">
+        <span style="font-size:12px;color:var(--text-primary)">📧 ${u}</span>
+        ${firebaseAuthUser && u === firebaseAuthUser.email ? '<span style="font-size:9px;color:var(--accent);font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(77,166,255,.12)">YOU</span>' : ''}
+      </div>`).join('')
+    : '<div style="font-size:11px;color:var(--text-muted);padding:6px 0">No admin users yet.</div>';
+  } catch(e) { el.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">Connect Firebase to manage users.</div>'; }
+}
+
+/* ════════════════════════════════════════
+   LOCAL PASSWORD AUTH (FALLBACK)
+════════════════════════════════════════ */
+function getAdminPass() {
+  try { return localStorage.getItem(ADMIN_PASS_KEY) || DEFAULT_ADMIN_PASS; } catch { return DEFAULT_ADMIN_PASS; }
+}
+
+function toggleAdminPassVis() {
+  const i = document.getElementById('admin-pass');
+  const e = document.getElementById('admin-eye');
+  if (!i) return;
+  if (i.type === 'password') { i.type = 'text'; if(e) e.textContent = '🙈'; }
+  else { i.type = 'password'; if(e) e.textContent = '👁'; }
+}
+
+function adminUnlock() {
+  const inp  = document.getElementById('admin-pass').value;
+  const err  = document.getElementById('admin-err');
+  if (inp === getAdminPass()) {
+    failedAttempts = 0;
+    const btn = document.querySelector('#login-local .lock-btn') || document.querySelector('.lock-btn');
+    if (btn) { btn.textContent = '⏳ Loading…'; btn.disabled = true; }
+    setTimeout(() => enterAdminPortal(null), 400);
+  } else {
+    failedAttempts++;
+    document.getElementById('admin-pass').value = '';
+    const box = document.querySelector('.lock-box');
+    if (box) { box.style.animation = 'none'; setTimeout(() => { box.style.animation = 'shake .4s ease'; }, 10); setTimeout(() => { box.style.animation = ''; }, 450); }
+    err.textContent = failedAttempts < 3
+      ? `❌ Wrong password. ${3 - failedAttempts} attempt${3-failedAttempts>1?'s':''} remaining.`
+      : '❌ Wrong password. Contact Kavish S R to reset.';
+  }
+}
+
+function adminLogout(auto = false) {
+  if (!auto && !confirm('Sign out of admin portal?')) return;
+  stopInactivityTimer();
+  sessionStorage.removeItem('admin_auth_ok');
+  if (firebaseAuthUser && typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+    firebase.auth().signOut().catch(() => {});
+    firebaseAuthUser = null;
+  }
+  // Unsubscribe Firestore listeners
+  if (typeof _unsubscribeListeners !== 'undefined') {
+    _unsubscribeListeners.forEach(fn => fn());
+    _unsubscribeListeners = [];
+  }
+  // Reset data
+  membersData = []; trainersData = []; attendanceData = {};
+  // Show lock screen
+  document.getElementById('admin-app').style.display   = 'none';
+  document.getElementById('lockscreen').style.display  = 'flex';
+  document.getElementById('admin-pass').value = '';
+  document.getElementById('admin-err').textContent = '';
+  document.getElementById('fb-login-err').textContent = '';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  const btn = document.getElementById('fb-login-btn');
+  if (btn) { btn.textContent = '🔥 Sign In with Firebase'; btn.disabled = false; }
+  failedAttempts = 0;
+}
+
+/* ════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════ */
+const PAGE_TITLES = {
+  dashboard:'DASHBOARD', members:'MEMBERS', attendance:'ATTENDANCE',
+  trainers:'TRAINERS', profile:'PROFILE & SECURITY', analytics:'EXERCISE ANALYTICS'
+};
+
+function nav(page, btn) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-' + page);
+  if (pg) pg.classList.add('active');
+  if (btn) btn.classList.add('active');
+  document.getElementById('page-title').textContent = PAGE_TITLES[page] || page.toUpperCase();
+
+  if (page === 'members')    renderMembersPage();
+  // Do NOT reset date when switching to attendance — preserve selected date
+  if (page === 'attendance') {
+    const d = document.getElementById('att-page-date');
+    if (d && !d.value) d.value = todayStr(); // only set if empty
+    renderAttendancePage();
+  }
+  if (page === 'trainers')   renderTrainersPage();
+  if (page === 'profile')    loadProfilePage();
+  if (page === 'analytics')  renderAnalyticsPage();
+}
+
+function adminMobNav(page, btn) {
+  document.querySelectorAll('.mob-nbtn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const desktopBtn = document.querySelector(`.nav-item[onclick*="nav('${page}'"]`);
+  nav(page, desktopBtn);
+}
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+async function initAdminApp() {
+  // Show loading state on dashboard
+  const grid = document.getElementById('dash-kpis');
+  if (grid) grid.innerHTML = `<div class="kpi-card" style="--card-accent:#4da6ff;grid-column:1/-1"><div class="kpi-lbl">⏳ Connecting to Firebase…</div><div style="font-size:12px;color:var(--text-muted);margin-top:6px">Loading gym data…</div></div>`;
+
+  const cfg = getFirebaseConfig();
+  if (cfg && cfg.apiKey) {
+    const ok = await connectFirebase(cfg);
+    if (!ok) {
+      if (grid) grid.innerHTML = `<div class="kpi-card" style="--card-accent:#e53935;grid-column:1/-1"><div class="kpi-lbl">❌ Firebase Not Connected</div><div style="font-size:12px;color:var(--text-muted);margin-top:6px">Go to the gym portal → Settings → Firebase Setup and save your config first.</div></div>`;
+    }
+  } else {
+    setFbIndicator('err', 'No config found');
+    if (grid) grid.innerHTML = `<div class="kpi-card" style="--card-accent:#f5a623;grid-column:1/-1"><div class="kpi-lbl">⚠️ Firebase Not Configured</div><div style="font-size:12px;color:var(--text-muted);margin-top:6px">Open the Gym Portal → Settings → Firebase Setup → paste your config and click Save &amp; Connect. Then reload this admin portal.</div></div>`;
+  }
+
+  // Set attendance date to today
+  const ad  = document.getElementById('att-page-date');
+  const adf = document.getElementById('att-date-filter');
+  if (ad)  ad.value  = todayStr();
+  if (adf) adf.value = todayStr();
+}
+
+/* ════════════════════════════════════════
+   FIREBASE
+════════════════════════════════════════ */
+function getFirebaseConfig() {
+  try { const v = localStorage.getItem(FB_CONFIG_KEY); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+
+async function connectFirebase(cfg) {
+  setFbIndicator('connecting', 'Connecting…');
+  try {
+    if (typeof firebase === 'undefined') throw new Error('Firebase SDK not loaded. Check your internet connection.');
+
+    // Handle already-initialized app (gym portal may have started it first)
+    if (firebase.apps.length > 0) {
+      // Reuse existing app only if same project
+      const existingApp = firebase.app();
+      const existingProjectId = existingApp.options.projectId;
+      if (existingProjectId !== cfg.projectId) {
+        // Different project — delete and reinit
+        await existingApp.delete();
+        firebase.initializeApp(cfg);
+      }
+      // else: same project, just reuse
+    } else {
+      firebase.initializeApp(cfg);
+    }
+
+    firestoreDB = firebase.firestore();
+
+    // Enable offline persistence (ignore if already enabled)
+    try { await firestoreDB.enablePersistence({ synchronizeTabs: true }); } catch(pe) {
+      if (pe.code !== 'failed-precondition' && pe.code !== 'unimplemented') {
+        console.warn('Persistence warning:', pe.code);
+      }
+    }
+
+    // Verify connection with a real Firestore read
+    await firestoreDB.collection('_ping').limit(1).get();
+
+    // Update all Firebase status displays
+    setFbIndicator('ok', `✅ ${cfg.projectId}`);
+    const pill = document.getElementById('fb-status-pill');
+    if (pill) { pill.textContent = 'Connected ✅'; pill.className = 'pill pill-green'; }
+    const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setEl('fb-conn-val', '✅ Connected');
+    setEl('fb-proj-val', cfg.projectId);
+
+    // Load all data and then render dashboard
+    await loadAllData();
+    return true;
+
+  } catch(e) {
+    console.error('Firebase connect error:', e);
+    let msg = e.message || 'Unknown error';
+    if (msg.includes('projectId') || msg.includes('apiKey')) msg = 'Invalid Firebase config — check API Key and Project ID.';
+    if (msg.includes('network') || msg.includes('fetch'))    msg = 'No internet connection.';
+    if (msg.includes('permission'))                          msg = 'Permission denied — check Firestore security rules.';
+    setFbIndicator('err', `❌ ${msg}`);
+    const pill = document.getElementById('fb-status-pill');
+    if (pill) { pill.textContent = 'Failed ❌'; pill.className = 'pill pill-danger'; }
+    const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setEl('fb-conn-val', '❌ ' + msg);
+    return false;
+  }
+}
+
+function setFbIndicator(state, text) {
+  const dot = document.getElementById('fb-dot');
+  const txt = document.getElementById('fb-indicator-text');
+  if (dot) { dot.className = 'fb-dot'; if (state) dot.classList.add(state); }
+  if (txt) txt.textContent = `Firebase: ${text}`;
+}
+
+/* ════════════════════════════════════════
+   LOAD ALL DATA FROM FIRESTORE
+════════════════════════════════════════ */
+let _unsubscribeListeners = [];
+
+async function loadAllData() {
+  if (!firestoreDB) return;
+
+  // Unsubscribe any existing listeners before re-subscribing
+  _unsubscribeListeners.forEach(fn => fn());
+  _unsubscribeListeners = [];
+
+  try {
+    // One-time fetch to get initial data fast
+    const [mSnap, tSnap, aSnap] = await Promise.all([
+      firestoreDB.collection('members').get(),
+      firestoreDB.collection('trainers').get(),
+      firestoreDB.collection('attendance').get(),
+    ]);
+
+    membersData    = mSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    trainersData   = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    attendanceData = {};
+    aSnap.docs.forEach(d => {
+      attendanceData[d.id] = d.data().data || d.data() || {};
+    });
+
+    updateDataCounters();
+    renderDashboard();
+    if (currentPage === 'members')    renderMembersPage();
+    if (currentPage === 'trainers')   renderTrainersPage();
+    if (currentPage === 'attendance') renderAttendancePage();
+
+    // Set up real-time listeners so admin portal auto-updates when gym portal changes data
+    const unsubM = firestoreDB.collection('members').onSnapshot(snap => {
+      membersData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateDataCounters();
+      renderDashboard();
+      if (currentPage === 'members')   renderMembersPage();
+      if (currentPage === 'analytics') renderAnalyticsPage();
+    }, err => console.warn('members listener:', err));
+
+    const unsubT = firestoreDB.collection('trainers').onSnapshot(snap => {
+      trainersData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateDataCounters();
+      renderDashboard();
+      if (currentPage === 'trainers') renderTrainersPage();
+    }, err => console.warn('trainers listener:', err));
+
+    const unsubA = firestoreDB.collection('attendance').onSnapshot(snap => {
+      attendanceData = {};
+      snap.docs.forEach(d => { attendanceData[d.id] = d.data().data || d.data() || {}; });
+      if (currentPage === 'attendance') renderAttendancePage();
+      if (currentPage === 'analytics')  renderAnalyticsPage();
+    }, err => console.warn('attendance listener:', err));
+
+    _unsubscribeListeners = [unsubM, unsubT, unsubA];
+
+  } catch(e) {
+    const errMsg = e.code === 'permission-denied'
+      ? '❌ Permission denied — update Firestore security rules to allow reads.'
+      : '❌ Failed to load data: ' + e.message;
+    showToast(errMsg, 'error');
+    console.error('loadAllData error:', e);
+    const grid = document.getElementById('dash-kpis');
+    if (grid) grid.innerHTML = `<div class="kpi-card" style="--card-accent:#e53935;grid-column:1/-1"><div class="kpi-lbl">❌ Data Load Failed</div><div style="font-size:12px;color:var(--text-muted);margin-top:6px">${errMsg}</div></div>`;
+  }
+}
+
+function updateDataCounters() {
+  const setEl = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  const revenue  = membersData.reduce((s,m)=>s+(m.paid||0),0);
+  const renewRev = membersData.reduce((s,m)=>s+(m.lastRenewalFee||0),0);
+  setEl('fb-m-count',   `${membersData.length} members`);
+  setEl('fb-t-count',   `${trainersData.length} trainers`);
+  setEl('fb-revenue',   `₹${revenue.toLocaleString('en-IN')}`);
+  setEl('fb-renew-rev', `₹${renewRev.toLocaleString('en-IN')}`);
+}
+
+/* ════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════ */
+function renderDashboard() {
+  const today   = todayStr();
+  const active  = membersData.filter(m => daysDiff(m.expiry) >= 0).length;
+  const expired = membersData.filter(m => daysDiff(m.expiry) < 0).length;
+  const expiring= membersData.filter(m => { const d=daysDiff(m.expiry); return d>=0&&d<=14; }).length;
+  const revenue = membersData.reduce((s,m) => s+(m.paid||0), 0);
+  const renewals = membersData.filter(m=>m.lastRenewal).length;
+  const renewRev = membersData.reduce((s,m)=>s+(m.lastRenewalFee||0),0);
+  const attRec  = attendanceData[today] || {};
+  // Handle both nested {data:{members:{}}} and flat {members:{}} structures
+  const attMembers  = attRec.members  || (attRec.data && attRec.data.members)  || {};
+  const attTrainers = attRec.trainers || (attRec.data && attRec.data.trainers) || {};
+
+  // Count only members that still exist in membersData (ignore stale keys)
+  const memberIds = new Set(membersData.map(m => String(m.id)));
+  let present = 0;
+  Object.entries(attMembers).forEach(([id, status]) => {
+    if (memberIds.has(String(id)) && status === 'present') present++;
+  });
+
+  // Count staff trainers present (exclude owner)
+  const staffIds = new Set(trainersData.filter(t => !t.isOwner).map(t => String(t.id)));
+  let staffPresent = 0;
+  Object.entries(attTrainers).forEach(([id, status]) => {
+    if (staffIds.has(String(id)) && status === 'present') staffPresent++;
+  });
+
+  const kpis = [
+    {lbl:'Total Members',    val:membersData.length,  icon:'👥', accent:'#4da6ff'},
+    {lbl:'Active',           val:active,               icon:'✅', accent:'#39e56a'},
+    {lbl:'Expiring (14d)',   val:expiring,             icon:'⏳', accent:'#f5a623'},
+    {lbl:'Expired',          val:expired,              icon:'🔴', accent:'#e53935'},
+    {lbl:'Total Revenue',    val:'₹'+revenue.toLocaleString('en-IN'), icon:'💰', accent:'#39e56a'},
+    {lbl:'Renewal Revenue',  val:'₹'+renewRev.toLocaleString('en-IN'), icon:'🔄', accent:'#c084fc'},
+    {lbl:'Trainers',         val:trainersData.length,  icon:'🎽', accent:'#c084fc'},
+    {lbl:"Today's Attendance", val:`${present}/${active}`, icon:'📋', accent:'#39e56a'},
+  ];
+  const grid = document.getElementById('dash-kpis');
+  if (grid) grid.innerHTML = kpis.map(k=>`
+    <div class="kpi-card" style="--card-accent:${k.accent}">
+      <div class="kpi-lbl">${k.icon} ${k.lbl}</div>
+      <div class="kpi-val" style="font-size:${String(k.val).length>5?'22px':'30px'}">${k.val}</div>
+    </div>`).join('');
+
+  // Expiry alerts
+  const expiredList  = membersData.filter(m => daysDiff(m.expiry) < 0);
+  const expiringList = membersData.filter(m => { const d=daysDiff(m.expiry); return d>=0&&d<=14; });
+  const alerts = document.getElementById('dash-alerts');
+  if (alerts) {
+    alerts.innerHTML = [
+      expiredList.length  ? `<div class="alert-row danger">🚨 <strong>${expiredList.length}</strong> membership${expiredList.length>1?'s':''} expired — ${expiredList.slice(0,3).map(m=>m.name.split(' ')[0]).join(', ')}${expiredList.length>3?' +more':''}</div>` : '',
+      expiringList.length ? `<div class="alert-row warn">⚠️ <strong>${expiringList.length}</strong> membership${expiringList.length>1?'s':''} expiring within 14 days</div>` : '',
+      !expiredList.length && !expiringList.length ? '<div style="color:var(--text-muted);font-size:12px;padding:12px 0">✅ No urgent alerts. All memberships are healthy.</div>' : '',
+    ].join('');
+  }
+
+  // Recent members table
+  const tbody = document.getElementById('dash-recent-tbody');
+  if (tbody) {
+    const recent = [...membersData].sort((a,b) => new Date(b.joinDate||0)-new Date(a.joinDate||0)).slice(0,8);
+    tbody.innerHTML = recent.map(m => {
+      const st = getStatus(m.expiry);
+      return `<tr>
+        <td><span style="font-size:9.5px;font-weight:700;color:var(--accent);font-family:var(--font-d)">M-${String(m.id).padStart(3,'0')}</span></td>
+        <td style="font-weight:600">${m.name}</td>
+        <td><span style="font-size:10px;color:var(--text-muted)">${(m.plan||'').replace('Plan ','')}</span></td>
+        <td>${fmtDate(m.expiry)}</td>
+        <td><span class="status-badge ${st.cls}">${st.icon} ${st.label}</span></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px">No members yet</td></tr>';
+  }
+}
+
+/* ════════════════════════════════════════
+   MEMBERS PAGE
+════════════════════════════════════════ */
+function renderMembersPage() {
+  const q   = ((document.getElementById('m-search') ? document.getElementById('m-search').value : '') || '').toLowerCase();
+  const fs  = (document.getElementById('m-fstatus') ? document.getElementById('m-fstatus').value : '') || '';
+  const fp  = (document.getElementById('m-fplan') ? document.getElementById('m-fplan').value : '')   || '';
+
+  let data = membersData.filter(m => {
+    const qm = !q || (m.name ? m.name.toLowerCase() : '').includes(q) || (m.plan||'').toLowerCase().includes(q) || (m.phone||'').includes(q);
+    const sm = !fs || getStatus(m.expiry).label === fs;
+    const pm = !fp || m.plan === fp;
+    return qm && sm && pm;
+  });
+
+  // Sort — expired first then by expiry date
+  data.sort((a,b) => new Date(a.expiry) - new Date(b.expiry));
+
+  const tot = data.length;
+  const pages = Math.max(1, Math.ceil(tot / M_PS));
+  mPage = Math.min(mPage, pages);
+  const sl = data.slice((mPage-1)*M_PS, mPage*M_PS);
+
+  // KPIs
+  const kGrid = document.getElementById('members-kpis');
+  if (kGrid) {
+    const active   = membersData.filter(m=>daysDiff(m.expiry)>=0).length;
+    const expired  = membersData.filter(m=>daysDiff(m.expiry)<0).length;
+    const expiring = membersData.filter(m=>{const d=daysDiff(m.expiry);return d>=0&&d<=14;}).length;
+    const revenue  = membersData.reduce((s,m)=>s+(m.paid||0),0);
+    const renewed  = membersData.filter(m=>m.lastRenewal).length;
+    const renewRev = membersData.reduce((s,m)=>s+(m.lastRenewalFee||0),0);
+    kGrid.innerHTML = [
+      {lbl:'Total Members',   val:membersData.length,                        accent:'#4da6ff'},
+      {lbl:'Active',          val:active,                                    accent:'#39e56a'},
+      {lbl:'Expiring Soon',   val:expiring,                                  accent:'#f5a623'},
+      {lbl:'Expired',         val:expired,                                   accent:'#e53935'},
+      {lbl:'Total Revenue',   val:'₹'+revenue.toLocaleString('en-IN'),       accent:'#39e56a'},
+      {lbl:'Renewals',        val:renewed + ' members',                      accent:'#c084fc'},
+    ].map(k=>`<div class="kpi-card" style="--card-accent:${k.accent}"><div class="kpi-lbl">${k.lbl}</div><div class="kpi-val" style="font-size:${String(k.val).length>7?'16px':'24px'}">${k.val}</div></div>`).join('');
+  }
+
+  const tbody = document.getElementById('members-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = sl.map(m => {
+    const st = getStatus(m.expiry);
+    const renewBadge = m.lastRenewal
+      ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(57,229,106,.1);color:#39e56a;border:1px solid rgba(57,229,106,.2)">🔄 Renewed</span>`
+      : '';
+    return `<tr>
+      <td><span style="font-size:10px;font-weight:700;color:var(--accent);font-family:var(--font-d)">M-${String(m.id).padStart(3,'0')}</span></td>
+      <td style="font-weight:600">${m.name||'—'} ${renewBadge}</td>
+      <td><span style="font-size:10px;color:var(--text-muted);background:rgba(255,255,255,.05);padding:2px 7px;border-radius:5px;border:1px solid var(--border)">${(m.plan||'').replace('Plan ','')}</span></td>
+      <td style="font-size:11px;color:var(--text-muted)">${m.duration||'Monthly'}</td>
+      <td style="font-size:11px">${fmtDate(m.joinDate)}</td>
+      <td style="font-size:11px">${fmtDate(m.expiry)}</td>
+      <td style="color:var(--accent);font-weight:600">
+        ₹${(m.paid||0).toLocaleString('en-IN')}
+        ${m.lastRenewalFee ? `<div style="font-size:9px;color:var(--text-muted);font-weight:400">Last: ₹${m.lastRenewalFee.toLocaleString('en-IN')}</div>` : ''}
+      </td>
+      <td style="font-size:11px;color:var(--text-muted)">${m.lastRenewal ? fmtDate(m.lastRenewal) : '—'}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${m.phone||'—'}</td>
+      <td><span class="status-badge ${st.cls}">${st.icon} ${st.label}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:18px">No members found</td></tr>';
+
+  // Pager
+  document.getElementById('m-pginfo').textContent = `${(mPage-1)*M_PS+1}–${Math.min(mPage*M_PS,tot)} of ${tot}`;
+  document.getElementById('m-pgbtns').innerHTML =
+    `<button class="pag-btn" onclick="mPage=Math.max(1,mPage-1);renderMembersPage()" ${mPage===1?'disabled':''}>‹</button>` +
+    Array.from({length:pages},(_,i)=>`<button class="pag-btn ${i+1===mPage?'active':''}" onclick="mPage=${i+1};renderMembersPage()">${i+1}</button>`).join('') +
+    `<button class="pag-btn" onclick="mPage=Math.min(${pages},mPage+1);renderMembersPage()" ${mPage>=pages?'disabled':''}>›</button>`;
+}
+
+/* ════════════════════════════════════════
+   ATTENDANCE PAGE
+════════════════════════════════════════ */
+async function renderAttendancePage() {
+  const date = (document.getElementById('att-page-date') ? document.getElementById('att-page-date').value : null) || todayStr();
+
+  // Try to load from Firestore if not cached
+  if (!attendanceData[date] && firestoreDB) {
+    try {
+      const snap = await firestoreDB.collection('attendance').doc(date).get();
+      if (snap.exists) attendanceData[date] = snap.data().data || {};
+    } catch(e) {}
+  }
+
+  const rec   = attendanceData[date] || {};
+  // Handle both {members:{}} and nested {data:{members:{}}} from Firestore
+  const mAtt  = rec.members   || (rec.data && rec.data.members)   || {};
+  const tAtt  = rec.trainers  || (rec.data && rec.data.trainers)  || {};
+  const exRec = rec.exercises  || (rec.data && rec.data.exercises) || {};
+
+  // Helper to look up attendance by ID — handles both string and number keys
+  const getAtt = (attObj, id) => attObj[id] || attObj[String(id)] || attObj[Number(id)] || 'Not Marked';
+
+  // Summary pills
+  const allMemberStatuses  = membersData.map(m => getAtt(mAtt, m.id));
+  const allTrainerStatuses = trainersData.filter(t=>!t.isOwner).map(t => getAtt(tAtt, t.id));
+  const mPresent  = allMemberStatuses.filter(s=>s==='present').length;
+  const mAbsent   = allMemberStatuses.filter(s=>s==='absent').length;
+  const mLate     = allMemberStatuses.filter(s=>s==='late').length;
+  const mUnmarked = allMemberStatuses.filter(s=>s==='Not Marked').length;
+
+  const pillEl = document.getElementById('att-summary-pills');
+  if (pillEl) pillEl.innerHTML = [
+    `<span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:rgba(57,229,106,.1);border:1px solid rgba(57,229,106,.2);color:#39e56a">✅ Present: ${mPresent}</span>`,
+    `<span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:rgba(229,57,53,.1);border:1px solid rgba(229,57,53,.2);color:#e53935">❌ Absent: ${mAbsent}</span>`,
+    `<span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.2);color:#f5a623">⏰ Late: ${mLate}</span>`,
+    `<span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text-muted)">⬜ Unmarked: ${mUnmarked}</span>`,
+  ].join('');
+
+  // Members table
+  const mCount = document.getElementById('att-m-count');
+  if (mCount) mCount.textContent = `${mPresent}/${membersData.length}`;
+  const mTbody = document.getElementById('att-members-tbody');
+  if (mTbody) mTbody.innerHTML = membersData.map(m => {
+    const status   = getAtt(mAtt, m.id);
+    const exDone   = (exRec[m.id] || exRec[String(m.id)] || []);
+    const exBadges = exDone.length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${exDone.map(e=>`<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(57,229,106,.1);color:#39e56a;border:1px solid rgba(57,229,106,.2)">${e}</span>`).join('')}</div>`
+      : '';
+    return `<tr>
+      <td><span style="font-size:10px;font-weight:700;color:var(--accent);font-family:var(--font-d)">M-${String(m.id).padStart(3,'0')}</span></td>
+      <td style="font-weight:600">${m.name||'—'}<br>${exBadges}</td>
+      <td style="font-size:10px;color:var(--text-muted)">${(m.plan||'').replace('Plan ','')}${m.exerciseCategory?` <span style="background:rgba(192,132,252,.12);color:#c084fc;border:1px solid rgba(192,132,252,.25);padding:1px 5px;border-radius:3px;font-size:9px">Cat ${m.exerciseCategory}</span>`:''}</td>
+      <td>${statusBadge(status)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:14px">No members</td></tr>';
+
+  // Trainers table (exclude owner)
+  const staffTrainers = trainersData.filter(t => !t.isOwner);
+  const tPresent = staffTrainers.filter(t => {
+    const s = tAtt[t.id] || tAtt[String(t.id)] || tAtt[Number(t.id)] || 'Not Marked';
+    return s === 'present';
+  }).length;
+  const tCount = document.getElementById('att-t-count');
+  if (tCount) tCount.textContent = `${tPresent}/${staffTrainers.length}`;
+  const tTbody = document.getElementById('att-trainers-tbody');
+  if (tTbody) tTbody.innerHTML = staffTrainers.length ? staffTrainers.map(t => {
+    const status = tAtt[t.id] || tAtt[String(t.id)] || tAtt[Number(t.id)] || 'Not Marked';
+    return `<tr>
+      <td><span style="font-size:10px;font-weight:700;color:#c084fc;font-family:var(--font-d)">T-${String(t.id).padStart(3,'0')}</span></td>
+      <td style="font-weight:600">${t.name||'—'}</td>
+      <td style="font-size:10px;color:var(--text-muted)">${t.role||'—'}</td>
+      <td>${statusBadge(status)}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:18px;font-size:12.5px">No trainers assigned yet</td></tr>';
+}
+
+/* ════════════════════════════════════════
+   TRAINERS PAGE
+════════════════════════════════════════ */
+function renderTrainersPage() {
+  const q = ((document.getElementById('t-search') ? document.getElementById('t-search').value : '') || '').toLowerCase();
+  const data = trainersData.filter(t => !q || (t.name ? t.name.toLowerCase() : '').includes(q));
+
+  // KPIs
+  const kGrid = document.getElementById('trainers-kpis');
+  if (kGrid) {
+    const today   = todayStr();
+    const attRec  = attendanceData[today] || {};
+    const staff   = trainersData.filter(t=>!t.isOwner);
+    const attTrainersAna = attRec.trainers || (attRec.data && attRec.data.trainers) || {};
+    const present = staff.filter(t => (attTrainersAna[t.id] || attTrainersAna[String(t.id)]) === 'present').length;
+    kGrid.innerHTML = [
+      {lbl:'Total Trainers',   val:trainersData.length, accent:'#c084fc'},
+      {lbl:'Staff Trainers',   val:staff.length,        accent:'#4da6ff'},
+      {lbl:"Today's Presence", val:`${present}/${staff.length}`, accent:'#39e56a'},
+    ].map(k=>`<div class="kpi-card" style="--card-accent:${k.accent}"><div class="kpi-lbl">${k.lbl}</div><div class="kpi-val">${k.val}</div></div>`).join('');
+  }
+
+  const TR_COLORS = ['#39e56a','#4da6ff','#f5a623','#c084fc','#e56339','#e5d439','#4dd0e1'];
+  const grid = document.getElementById('trainer-cards-grid');
+  if (!grid) return;
+  grid.innerHTML = data.map((t, i) => {
+    const col   = TR_COLORS[i % TR_COLORS.length];
+    const init  = (t.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const idBadge = t.isOwner
+      ? `<span style="font-size:9px;font-weight:700;color:#f5a623;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.2);padding:2px 7px;border-radius:4px">OWNER</span>`
+      : `<span style="font-size:9.5px;font-weight:700;color:#c084fc;font-family:var(--font-d);background:rgba(192,132,252,.1);border:1px solid rgba(192,132,252,.2);padding:2px 7px;border-radius:4px">T-${String(t.id).padStart(3,'0')}</span>`;
+    const today   = todayStr();
+    const attRec  = (attendanceData[today]||{}).trainers || {};
+    const attSt   = t.isOwner ? null : (attRec[t.id] || 'Not Marked');
+
+    return `<div style="background:linear-gradient(145deg,#111620,#0d1117);border:1px solid rgba(255,255,255,.05);border-top:2px solid ${col};border-radius:12px;padding:16px;transition:transform .2s" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:12px">
+        <div style="width:42px;height:42px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:15px;font-weight:900;color:#07090a;flex-shrink:0;box-shadow:0 0 0 3px ${col}33">${init}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:6px">${t.name||'—'} ${t.isOwner?'👑':''}</div>
+          <div style="font-size:9.5px;font-weight:600;color:${col};letter-spacing:.06em;text-transform:uppercase;margin-top:2px">${t.role||'—'}</div>
+          ${t.isOwner?`<div style="font-size:9px;color:#f5a623;font-weight:700;margin-top:2px">🥇 MR. TAMIL NADU</div>`:''}
+        </div>
+        ${idBadge}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">
+        <div style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:7px;padding:7px 9px">
+          <div style="font-size:8.5px;color:var(--text-label);text-transform:uppercase;letter-spacing:.1em;font-weight:600">Experience</div>
+          <div style="font-family:var(--font-d);font-size:15px;font-weight:800;margin-top:1px">${t.exp||0} <span style="font-size:10px;color:var(--text-muted)">yrs</span></div>
+        </div>
+        <div style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:7px;padding:7px 9px">
+          <div style="font-size:8.5px;color:var(--text-label);text-transform:uppercase;letter-spacing:.1em;font-weight:600">Members</div>
+          <div style="font-family:var(--font-d);font-size:15px;font-weight:800;margin-top:1px">${t.members||0}</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">📞 ${t.phone||'—'}</div>
+      ${(t.skills||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:4px">${(t.skills||[]).slice(0,3).map(s=>`<span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--text-muted)">${s}</span>`).join('')}${(t.skills||[]).length>3?`<span style="font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--text-label)">+${t.skills.length-3}</span>`:''}</div>` : ''}
+      ${attSt !== null ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);font-size:11px">Today: ${statusBadge(attSt)}</div>` : ''}
+    </div>`;
+  }).join('') || '<div style="color:var(--text-muted);font-size:13px;padding:20px;text-align:center">No trainers found</div>';
+}
+
+/* ════════════════════════════════════════
+   PROFILE & SECURITY PAGE
+════════════════════════════════════════ */
+/* Show/hide individual password fields */
+function toggleFieldVis(fieldId, btn) {
+  const inp = document.getElementById(fieldId);
+  if (!inp) return;
+  if (inp.type === 'password') { inp.type = 'text';     btn.textContent = '🙈'; }
+  else                         { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
+/* Show/hide admin password display */
+let adminPassVisible = false;
+function toggleAdminPassDisplay() {
+  adminPassVisible = !adminPassVisible;
+  const el  = document.getElementById('admin-pass-display');
+  const btn = document.getElementById('admin-pass-reveal-btn');
+  if (!el || !btn) return;
+  if (adminPassVisible) {
+    el.textContent   = getAdminPass();
+    el.style.filter  = 'none';
+    el.style.userSelect = 'text';
+    btn.textContent  = '🙈 Hide';
+  } else {
+    el.textContent   = '••••••••••••';
+    el.style.filter  = 'blur(5px)';
+    el.style.userSelect = 'none';
+    btn.textContent  = '👁 Show';
+  }
+}
+
+/* Change admin password */
+
+/* ════════════════════════════════════════
+   EXERCISE CATEGORIES (mirrors gym portal)
+════════════════════════════════════════ */
+const EXERCISE_CATEGORIES = {
+  A:['Chest & Abs','Biceps & Fore Arms','Triceps & Abs','Shoulder & Fore Arms','Lats & Abs','Thighs & Calf','Rest'],
+  B:['Biceps & Fore Arms','Thighs & Calf','Shoulder & Fore Arms','Lats & Abs','Triceps & Abs','Chest & Abs','Rest'],
+  C:['Triceps & Abs','Lats & Calf','Biceps & Fore Arms','Chest & Abs','Thighs','Shoulder & Fore Arms','Rest'],
+  D:['Thighs & Calf','Chest & Abs','Lats','Biceps & Fore Arms','Triceps & Abs','Shoulder & Fore Arms','Rest'],
+  E:['Lats & Abs','Shoulder & Fore Arms','Chest & Abs','Thighs & Calf','Biceps & Fore Arms','Triceps & Abs','Rest'],
+  F:['Chest & Triceps & Abs','Thighs & Lats & Abs','Shoulder & Biceps & Abs','Calf & Abs & Fore Arms','Rest']
+};
+const CAT_COLORS = {A:'#39e56a',B:'#4da6ff',C:'#f5a623',D:'#c084fc',E:'#e56339',F:'#4dd0e1'};
+
+/* ════════════════════════════════════════
+   ANALYTICS PAGE
+════════════════════════════════════════ */
+function renderAnalyticsPage() {
+  if (!membersData.length) {
+    ['admin-cat-grid','admin-cat-detail','admin-ex-today','admin-att-by-cat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px 0">No data yet. Add members with exercise categories.</div>';
+    });
+    return;
+  }
+
+  const today    = (document.getElementById('att-page-date') ? document.getElementById('att-page-date').value : null) || todayStr();
+  const attRec   = attendanceData[today] || {};
+  const mAtt     = attRec.members   || (attRec.data && attRec.data.members)   || {};
+  const exRec    = attRec.exercises  || (attRec.data && attRec.data.exercises) || {};
+  const totalMem = membersData.length;
+
+  /* ── Category Distribution Cards ── */
+  const catGrid = document.getElementById('admin-cat-grid');
+  if (catGrid) {
+    catGrid.innerHTML = Object.keys(EXERCISE_CATEGORIES).map(cat => {
+      const count   = membersData.filter(m => m.exerciseCategory === cat).length;
+      const pct     = totalMem ? Math.round(count/totalMem*100) : 0;
+      const color   = CAT_COLORS[cat];
+      const present = membersData.filter(m => m.exerciseCategory === cat && (mAtt[m.id]||mAtt[String(m.id)]) === 'present').length;
+      return `<div class="cat-stat-card" style="border-top:2px solid ${color}">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="cat-letter" style="color:${color}">Cat ${cat}</div>
+          <div style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${color}22;color:${color}">${pct}%</div>
+        </div>
+        <div class="cat-count">${count} <span style="font-size:12px;color:var(--text-muted);font-weight:400">members</span></div>
+        <div class="cat-members">${present} present today · ${EXERCISE_CATEGORIES[cat].filter(e=>e!=='Rest').length} exercises</div>
+        <div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%;background:linear-gradient(90deg,${color},${color}88)"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  /* ── Category Details (all exercises listed) ── */
+  const catDetail = document.getElementById('admin-cat-detail');
+  if (catDetail) {
+    catDetail.innerHTML = Object.entries(EXERCISE_CATEGORIES).map(([cat, exercises]) => {
+      const count = membersData.filter(m => m.exerciseCategory === cat).length;
+      const color = CAT_COLORS[cat];
+      return `<div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-family:var(--font-d);font-size:16px;font-weight:900;color:${color}">Category ${cat}</span>
+          <span style="font-size:10px;color:var(--text-muted)">${count} members</span>
+        </div>
+        ${exercises.map((ex, i) => `<div class="ex-list-item">
+          <div class="ex-dot" style="background:${ex==='Rest'?'var(--danger)':color}"></div>
+          <span style="color:${ex==='Rest'?'var(--danger)':'var(--text-primary)'}">${i+1}. ${ex}</span>
+        </div>`).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  /* ── Most Done Exercises Today ── */
+  const exTodayEl = document.getElementById('admin-ex-today');
+  const attDatePill = document.getElementById('admin-att-date-pill');
+  if (attDatePill) attDatePill.textContent = fmtDate(today);
+  if (exTodayEl) {
+    // Count how many members did each exercise today
+    const exerciseCounts = {};
+    Object.entries(exRec).forEach(([memberId, exList]) => {
+      (exList||[]).forEach(ex => {
+        exerciseCounts[ex] = (exerciseCounts[ex]||0) + 1;
+      });
+    });
+    const sorted = Object.entries(exerciseCounts).sort((a,b)=>b[1]-a[1]);
+    const maxCount = (sorted[0] ? sorted[0][1] : 0) || 1;
+    if (sorted.length === 0) {
+      exTodayEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px 0">No exercises recorded today yet.</div>';
+    } else {
+      exTodayEl.innerHTML = sorted.map(([ex, cnt]) => `
+        <div class="att-exercise-row">
+          <div class="att-exercise-count">${cnt}</div>
+          <div class="att-exercise-name">${ex}</div>
+          <div class="att-exercise-bar-wrap"><div class="att-exercise-bar" style="width:${Math.round(cnt/maxCount*100)}%"></div></div>
+        </div>`).join('');
+    }
+  }
+
+  /* ── Attendance by Category ── */
+  const attByCat = document.getElementById('admin-att-by-cat');
+  if (attByCat) {
+    const rows = Object.keys(EXERCISE_CATEGORIES).map(cat => {
+      const mems    = membersData.filter(m => m.exerciseCategory === cat);
+      const total   = mems.length;
+      if (!total) return '';
+      const present = mems.filter(m => (mAtt[m.id]||mAtt[String(m.id)]) === 'present').length;
+      const absent  = mems.filter(m => (mAtt[m.id]||mAtt[String(m.id)]) === 'absent').length;
+      const late    = mems.filter(m => (mAtt[m.id]||mAtt[String(m.id)]) === 'late').length;
+      const nomark  = total - present - absent - late;
+      const pct     = Math.round(present/total*100);
+      const color   = CAT_COLORS[cat];
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(255,255,255,.02);border-radius:9px;margin-bottom:8px">
+        <div style="font-family:var(--font-d);font-size:20px;font-weight:900;color:${color};width:30px;flex-shrink:0">Cat ${cat}</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+            <span style="font-size:12px;font-weight:600;color:var(--text-primary)">${total} members</span>
+            <span style="font-size:10px;color:#39e56a">✅ ${present}</span>
+            <span style="font-size:10px;color:#e53935">❌ ${absent}</span>
+            <span style="font-size:10px;color:#f5a623">⏰ ${late}</span>
+            <span style="font-size:10px;color:var(--text-muted)">⬜ ${nomark}</span>
+          </div>
+          <div style="height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;display:flex">
+            <div style="width:${Math.round(present/total*100)}%;background:#39e56a;transition:width .5s"></div>
+            <div style="width:${Math.round(late/total*100)}%;background:#f5a623;transition:width .5s"></div>
+            <div style="width:${Math.round(absent/total*100)}%;background:#e53935;transition:width .5s"></div>
+          </div>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:${color};flex-shrink:0">${pct}%</div>
+      </div>`;
+    }).filter(Boolean).join('');
+    attByCat.innerHTML = rows || '<div style="color:var(--text-muted);font-size:12px;padding:12px 0">No members assigned to categories yet.</div>';
+  }
+}
+
+function changeAdminPassword() {
+  const cur  = document.getElementById('ap-cur').value;
+  const np   = document.getElementById('ap-new').value;
+  const conf = document.getElementById('ap-conf').value;
+  const msg  = document.getElementById('ap-msg');
+
+  if (!cur)                     { msg.style.color='var(--danger)'; msg.textContent='❌ Enter your current password.'; return; }
+  if (cur !== getAdminPass())   { msg.style.color='var(--danger)'; msg.textContent='❌ Current password is incorrect.'; shakePanelBy('ap-cur'); return; }
+  if (!np)                      { msg.style.color='var(--danger)'; msg.textContent='❌ Enter a new password.'; return; }
+  if (np.length < 6)            { msg.style.color='var(--danger)'; msg.textContent='❌ Password must be at least 6 characters.'; return; }
+  if (np !== conf)              { msg.style.color='var(--danger)'; msg.textContent='❌ Passwords do not match.'; return; }
+
+  try { localStorage.setItem(ADMIN_PASS_KEY, np); } catch {}
+  ['ap-cur','ap-new','ap-conf'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  // If pass was visible, refresh display
+  if (adminPassVisible) { adminPassVisible = false; toggleAdminPassDisplay(); }
+  msg.style.color = 'var(--success)';
+  msg.textContent = '✅ Admin password updated successfully!';
+  showToast('✅ Admin password changed!', 'ok');
+  setTimeout(() => msg.textContent='', 4000);
+}
+
+/* Helper — shake a field's parent on wrong input */
+function shakePanelBy(fieldId) {
+  const el = document.getElementById(fieldId);
+  if (!el) return;
+  el.style.borderColor = 'var(--danger)';
+  setTimeout(() => el.style.borderColor='', 1500);
+}
+
+/* Load profile page state on nav */
+function loadProfilePage() {
+  adminPassVisible = false;
+  const apd = document.getElementById('admin-pass-display');
+  if (apd) { apd.textContent='••••••••••••'; apd.style.filter='blur(5px)'; apd.style.userSelect='none'; }
+  const arb = document.getElementById('admin-pass-reveal-btn');
+  if (arb) arb.textContent = '👁 Show';
+  ['ap-cur','ap-new','ap-conf'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const msg = document.getElementById('ap-msg');
+  if (msg) msg.textContent = '';
+  // Load Firebase admin users list
+  loadAdminUsers();
+}
+
+/* ── Today button ── */
+function gotoToday() {
+  const d = document.getElementById('att-page-date');
+  if (d) { d.value = todayStr(); renderAttendancePage(); }
+}
+
+/* ── Refresh with loading animation ── */
+async function refreshAllData(btn) {
+  if (!firestoreDB) { showToast('❌ Firebase not connected.', 'error'); return; }
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '⏳'; btn.disabled = true; }
+  await loadAllData();
+  if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+  showToast('✅ Data refreshed!', 'ok');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateClock();
+
+  // SECURITY: sessionStorage survives refresh but clears when tab closes
+  const isAuthenticated = sessionStorage.getItem('admin_auth_ok') === '1';
+
+  if (isAuthenticated) {
+    // Refresh case — restore Firebase and re-enter portal
+    const cfg = getFirebaseConfig();
+    if (cfg && cfg.apiKey && typeof firebase !== 'undefined') {
+      try {
+        if (firebase.apps.length === 0) firebase.initializeApp(cfg);
+        firestoreDB = firebase.firestore();
+        firestoreDB.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+      } catch(e) {}
+    }
+    document.getElementById('lockscreen').style.display = 'none';
+    document.getElementById('admin-app').style.display  = 'flex';
+    const d = document.getElementById('att-page-date');
+    if (d && !d.value) d.value = todayStr();
+    startInactivityTimer();
+    initAdminApp();
+    return;
+  }
+
+  // Fresh visit — clear any cached Firebase session
+  if (typeof firebase !== 'undefined') {
+    const cfg = getFirebaseConfig();
+    if (cfg && cfg.apiKey) {
+      try {
+        if (firebase.apps.length === 0) firebase.initializeApp(cfg);
+        firebase.auth().signOut().catch(() => {});
+      } catch(e) {}
+    }
+  }
+
+  // Set default attendance date and focus email
+  const d = document.getElementById('att-page-date');
+  if (d) d.value = todayStr();
+  setTimeout(() => { const el = document.getElementById('login-email'); if (el) el.focus(); }, 100);
+
+  // Listen for Firebase config changes in another tab
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'asfit_firebase' && e.newValue) {
+      try {
+        const cfg2 = JSON.parse(e.newValue);
+        if (cfg2 && cfg2.apiKey) connectFirebase(cfg2);
+      } catch(err) {}
+    }
+  });
+});
+</script>
+</body>
+</html>
