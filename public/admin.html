@@ -345,62 +345,46 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);mi
     </div>
     <div class="lock-logo">A.S. FITNESS</div>
     <div class="lock-brand">ADMIN PORTAL</div>
-    <div class="lock-sub">Secure Access · Firebase Authentication</div>
 
-    <!-- Tab switcher: Firebase login vs local fallback -->
-    <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;margin-top:8px">
-      <button id="tab-firebase" onclick="switchLoginTab('firebase')"
-        style="flex:1;padding:7px;border:none;background:rgba(77,166,255,.15);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;transition:all .18s">
-        🔥 Firebase Login
-      </button>
-      <button id="tab-local" onclick="switchLoginTab('local')"
-        style="flex:1;padding:7px;border:none;background:transparent;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .18s">
-        🔑 Local Password
-      </button>
-    </div>
-
-    <!-- Firebase Email/Password Login -->
-    <div id="login-firebase">
-      <label class="lock-label">Email Address</label>
-      <div class="lock-field" style="margin-bottom:10px">
-        <input class="lock-input" type="email" id="login-email" placeholder="admin@asfitness.com"
-          onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()"
-          style="padding-right:12px">
+    <!-- STEP 1: Login -->
+    <div id="step-login">
+      <div class="lock-sub" style="margin-bottom:12px">Step 1 of 2 · Firebase / Local Authentication</div>
+      <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px">
+        <button id="tab-firebase" onclick="switchLoginTab('firebase')" style="flex:1;padding:7px;border:none;background:rgba(77,166,255,.15);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;transition:all .18s">🔥 Firebase Login</button>
+        <button id="tab-local" onclick="switchLoginTab('local')" style="flex:1;padding:7px;border:none;background:transparent;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .18s">🔑 Local Password</button>
       </div>
-      <label class="lock-label">Password</label>
-      <div class="lock-field">
-        <input class="lock-input" type="password" id="login-password" placeholder="Firebase account password"
-          onkeydown="if(event.key==='Enter')firebaseLogin()">
-        <span class="lock-eye" onclick="togglePassVis('login-password',this)">👁</span>
+      <div id="login-firebase">
+        <label class="lock-label">Email Address</label>
+        <div class="lock-field" style="margin-bottom:10px"><input class="lock-input" type="email" id="login-email" placeholder="admin@asfitness.com" onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()" style="padding-right:12px"></div>
+        <label class="lock-label">Password</label>
+        <div class="lock-field"><input class="lock-input" type="password" id="login-password" placeholder="Firebase account password" onkeydown="if(event.key==='Enter')firebaseLogin()"><span class="lock-eye" onclick="togglePassVis('login-password',this)">👁</span></div>
+        <button class="lock-btn" onclick="firebaseLogin()" id="fb-login-btn">🔥 Sign In with Firebase</button>
+        <div style="text-align:center;margin-top:8px"><button onclick="showForgotPassword()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;text-decoration:underline">Forgot password?</button></div>
+        <div class="lock-err" id="fb-login-err"></div>
       </div>
-      <button class="lock-btn" onclick="firebaseLogin()" id="fb-login-btn">🔥 Sign In with Firebase</button>
-      <div style="text-align:center;margin-top:8px">
-        <button onclick="showForgotPassword()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;text-decoration:underline">Forgot password?</button>
-      </div>
-      <div class="lock-err" id="fb-login-err"></div>
-      <div style="background:rgba(77,166,255,.06);border:1px solid rgba(77,166,255,.1);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:10.5px;color:var(--text-muted);line-height:1.7">
-        <strong style="color:var(--accent)">ℹ️ First time?</strong> Create your Firebase account from
-        <strong style="color:var(--text-primary)">Gym Portal → Settings → Firebase Setup → Create Admin Account</strong>.
-        Multiple team members can each have their own login.
+      <div id="login-local" style="display:none">
+        <label class="lock-label">Admin Password</label>
+        <div class="lock-field"><input class="lock-input" type="password" id="admin-pass" placeholder="Enter local admin password" onkeydown="if(event.key==='Enter')adminUnlock()"><span class="lock-eye" id="admin-eye" onclick="toggleAdminPassVis()">👁</span></div>
+        <button class="lock-btn" onclick="adminUnlock()">🔓 Access Admin Portal</button>
+        <div class="lock-err" id="admin-err"></div>
+        <div class="lock-hint" id="admin-hint" style="opacity:0"></div>
       </div>
     </div>
 
-    <!-- Local Password Fallback -->
-    <div id="login-local" style="display:none">
-      <label class="lock-label">Admin Password</label>
-      <div class="lock-field">
-        <input class="lock-input" type="password" id="admin-pass" placeholder="Enter local admin password"
-          onkeydown="if(event.key==='Enter')adminUnlock()">
-        <span class="lock-eye" id="admin-eye" onclick="toggleAdminPassVis()">👁</span>
+    <!-- STEP 2: Secret Code -->
+    <div id="step-secret" style="display:none">
+      <div class="lock-sub" style="margin-bottom:16px">Step 2 of 2 · Secret Access Code</div>
+      <div style="background:rgba(77,166,255,.06);border:1px solid rgba(77,166,255,.15);border-radius:9px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--text-muted);text-align:center">
+        🔐 Enter the secret code to complete access.<br>Contact <strong style="color:var(--accent)">Kavish S R</strong> if you don't have it.
       </div>
-      <button class="lock-btn" onclick="adminUnlock()">🔓 Access Admin Portal</button>
-      <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:8px">
-        ⚠️ Local mode — device-specific. Use Firebase login for secure multi-device access.
-      </div>
-      <div class="lock-err" id="admin-err"></div>
-      <div class="lock-hint" id="admin-hint" style="opacity:0"></div>
+      <label class="lock-label">Secret Access Code</label>
+      <div class="lock-field"><input class="lock-input" type="password" id="secret-code-input" placeholder="Enter secret code" onkeydown="if(event.key==='Enter')verifySecretCode()"><span class="lock-eye" onclick="togglePassVis('secret-code-input',this)">👁</span></div>
+      <button class="lock-btn" onclick="verifySecretCode()" id="secret-code-btn">🔓 Verify Code</button>
+      <div class="lock-err" id="secret-code-err"></div>
+      <div style="margin-top:12px;text-align:center"><button onclick="backToLogin()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;text-decoration:underline">← Back to login</button></div>
     </div>
   </div>
+</div>
 </div>
 
 <!-- Forgot Password Modal -->
@@ -515,7 +499,7 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);mi
         <div class="panel-hdr">
           <span class="panel-ttl">All Members</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <input type="text" id="m-search" placeholder="Search name / plan…" oninput="renderMembersPage()"
+            <input type="text" id="m-search" placeholder="Search name / member ID / phone…" oninput="renderMembersPage()"
               style="background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;width:190px">
             <select id="m-fstatus" onchange="renderMembersPage()"
               style="background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;cursor:pointer">
@@ -634,6 +618,37 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);mi
           <div id="ap-msg" style="font-size:11.5px;margin-top:8px;min-height:16px;text-align:center"></div>
         </div>
 
+        <!-- Secret Code Change -->
+        <div class="panel" style="margin-top:14px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">🔑 Change Secret Access Code</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">
+            The secret code is required as Step 2 during login. Default: <code style="background:rgba(0,0,0,.3);padding:1px 6px;border-radius:4px;color:var(--accent)">KJ9080</code>
+          </div>
+          <div class="form-group"><label>Current Admin Password (to authorize)</label>
+            <div style="position:relative">
+              <input type="password" id="sc-auth-pass" placeholder="Enter your admin password"
+                style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 40px 9px 11px;font-family:var(--font-b);font-size:13px;color:var(--text-primary);outline:none">
+              <span onclick="toggleFieldVis('sc-auth-pass',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--text-muted)">👁</span>
+            </div>
+          </div>
+          <div class="form-group"><label>New Secret Code</label>
+            <div style="position:relative">
+              <input type="password" id="sc-new" placeholder="Min. 4 characters"
+                style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 40px 9px 11px;font-family:var(--font-b);font-size:13px;color:var(--text-primary);outline:none">
+              <span onclick="toggleFieldVis('sc-new',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--text-muted)">👁</span>
+            </div>
+          </div>
+          <div class="form-group"><label>Confirm New Secret Code</label>
+            <div style="position:relative">
+              <input type="password" id="sc-conf" placeholder="Repeat new secret code" onkeydown="if(event.key==='Enter')changeSecretCode()"
+                style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 40px 9px 11px;font-family:var(--font-b);font-size:13px;color:var(--text-primary);outline:none">
+              <span onclick="toggleFieldVis('sc-conf',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--text-muted)">👁</span>
+            </div>
+          </div>
+          <button class="btn btn-warn" style="width:100%;justify-content:center" onclick="changeSecretCode()">🔑 Update Secret Code</button>
+          <div id="sc-msg" style="font-size:11.5px;margin-top:8px;min-height:16px;text-align:center"></div>
+        </div>
+
         <div style="background:rgba(77,166,255,.04);border:1px solid rgba(77,166,255,.1);border-radius:10px;padding:14px 16px;font-size:12px;color:var(--text-muted);line-height:1.7">
           <strong style="color:var(--accent)">ℹ️ Data sync</strong><br>
           Member, attendance and trainer data is synced via <strong style="color:var(--text-primary)">Firebase Firestore</strong> — visible on any device that has the Firebase config saved.
@@ -667,28 +682,28 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);mi
     <div id="page-analytics" class="page">
       <div class="sec-title">Exercise &amp; Attendance Analytics</div>
 
-      <!-- Category Distribution -->
+      <!-- Exercise List -->
       <div class="panel">
-        <div class="panel-hdr"><span class="panel-ttl">Exercise Category Distribution</span><button class="btn btn-ghost btn-sm" onclick="renderAnalyticsPage()">🔄</button></div>
-        <div class="cat-stats-grid" id="admin-cat-grid"></div>
+        <div class="panel-hdr"><span class="panel-ttl">💪 All Exercises</span><button class="btn btn-ghost btn-sm" onclick="renderAnalyticsPage()">🔄</button></div>
+        <div id="admin-cat-grid"></div>
       </div>
 
-      <!-- Exercise breakdown per category -->
+      <!-- Attendance summary + Most done exercises -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px" id="admin-ex-detail-grid">
         <div class="panel">
-          <div class="panel-hdr"><span class="panel-ttl">Category Details</span></div>
+          <div class="panel-hdr"><span class="panel-ttl">📋 Today's Summary</span></div>
           <div id="admin-cat-detail"></div>
         </div>
         <div class="panel">
-          <div class="panel-hdr"><span class="panel-ttl">Most Done Exercises Today</span><span id="admin-att-date-pill" class="pill pill-blue"></span></div>
+          <div class="panel-hdr"><span class="panel-ttl">🏆 Most Done Today</span><span id="admin-att-date-pill" class="pill pill-blue"></span></div>
           <div id="admin-ex-today"></div>
         </div>
       </div>
 
-      <!-- Attendance trend -->
+      <!-- Member exercise log -->
       <div class="panel">
         <div class="panel-hdr">
-          <span class="panel-ttl">Attendance by Category (Today)</span>
+          <span class="panel-ttl">📝 Member Exercise Log (Today)</span>
         </div>
         <div id="admin-att-by-cat"></div>
       </div>
@@ -846,9 +861,68 @@ function statusBadge(s) {
   return `<span style="font-size:10px;font-weight:700;color:${color};letter-spacing:.04em">${label}</span>`;
 }
 
-/* ════════════════════════════════════════
-   LOGIN TAB SWITCHER
-════════════════════════════════════════ */
+const SECRET_CODE_KEY     = 'asfit_secret_code';
+const DEFAULT_SECRET_CODE = 'KJ9080';
+
+function getSecretCode() {
+  try { return localStorage.getItem(SECRET_CODE_KEY) || DEFAULT_SECRET_CODE; } catch { return DEFAULT_SECRET_CODE; }
+}
+function setSecretCode(code) {
+  try { localStorage.setItem(SECRET_CODE_KEY, code); } catch {} 
+}
+
+/* Called after step 1 login succeeds — show step 2 secret code screen */
+function showSecretCodeStep() {
+  document.getElementById('step-login').style.display  = 'none';
+  document.getElementById('step-secret').style.display = 'block';
+  setTimeout(() => { const el = document.getElementById('secret-code-input'); if(el) el.focus(); }, 100);
+}
+
+function backToLogin() {
+  document.getElementById('step-secret').style.display = 'none';
+  document.getElementById('step-login').style.display  = 'block';
+  document.getElementById('secret-code-input').value   = '';
+  document.getElementById('secret-code-err').textContent = '';
+  // Sign out Firebase if was signed in via Firebase
+  if (firebaseAuthUser && typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+    firebase.auth().signOut().catch(() => {});
+    firebaseAuthUser = null;
+  }
+}
+
+let _secretFailedAttempts = 0;
+function verifySecretCode() {
+  const inp = document.getElementById('secret-code-input').value.trim();
+  const err = document.getElementById('secret-code-err');
+  const btn = document.getElementById('secret-code-btn');
+  if (!inp) { err.textContent = '❌ Enter the secret code.'; return; }
+  if (inp === getSecretCode()) {
+    _secretFailedAttempts = 0;
+    btn.textContent = '✅ Verified!'; btn.disabled = true;
+    setTimeout(() => _doEnterPortal(), 400);
+  } else {
+    _secretFailedAttempts++;
+    document.getElementById('secret-code-input').value = '';
+    if (_secretFailedAttempts >= 3) {
+      err.textContent = '❌ Wrong code. Too many attempts — please contact Kavish S R.';
+    } else {
+      err.textContent = `❌ Wrong secret code. ${3 - _secretFailedAttempts} attempt${3-_secretFailedAttempts>1?'s':''} remaining.`;
+    }
+  }
+}
+
+/* _doEnterPortal — called after BOTH steps pass */
+function _doEnterPortal() {
+  sessionStorage.setItem('admin_auth_ok', '1');
+  document.getElementById('lockscreen').style.display = 'none';
+  document.getElementById('admin-app').style.display  = 'flex';
+  const userEl = document.getElementById('topbar-user');
+  if (userEl && firebaseAuthUser) userEl.textContent = '👤 ' + firebaseAuthUser.email;
+  updateClock();
+  initAdminApp();
+}
+
+
 function switchLoginTab(tab) {
   const isFB = tab === 'firebase';
   document.getElementById('login-firebase').style.display = isFB ? 'block' : 'none';
@@ -911,14 +985,15 @@ function checkAuthState() {
 }
 
 function enterAdminPortal(email) {
-  sessionStorage.setItem('admin_auth_ok', '1');
-  document.getElementById('lockscreen').style.display = 'none';
-  document.getElementById('admin-app').style.display  = 'flex';
-  const userEl = document.getElementById('topbar-user');
-  if (userEl && email) userEl.textContent = '👤 ' + email;
-  updateClock();
-  startInactivityTimer();
-  initAdminApp();
+  // After step 1 (login), go to step 2 (secret code)
+  _secretFailedAttempts = 0;
+  const btn = document.getElementById('secret-code-btn');
+  if (btn) { btn.textContent = '🔓 Verify Code'; btn.disabled = false; }
+  const err = document.getElementById('secret-code-err');
+  if (err) err.textContent = '';
+  const inp = document.getElementById('secret-code-input');
+  if (inp) inp.value = '';
+  showSecretCodeStep();
 }
 
 function showForgotPassword() {
@@ -1055,7 +1130,7 @@ function adminUnlock() {
     failedAttempts = 0;
     const btn = document.querySelector('#login-local .lock-btn') || document.querySelector('.lock-btn');
     if (btn) { btn.textContent = '⏳ Loading…'; btn.disabled = true; }
-    setTimeout(() => enterAdminPortal(null), 400);
+    setTimeout(() => enterAdminPortal(null), 300);
   } else {
     failedAttempts++;
     document.getElementById('admin-pass').value = '';
@@ -1375,7 +1450,7 @@ function renderDashboard() {
     tbody.innerHTML = recent.map(m => {
       const st = getStatus(m.expiry);
       return `<tr>
-        <td><span style="font-size:9.5px;font-weight:700;color:var(--accent);font-family:var(--font-d)">M-${String(m.id).padStart(3,'0')}</span></td>
+        <td><span style="font-size:9.5px;font-weight:700;color:var(--accent);font-family:var(--font-d)">${m.customId || 'M-'+String(m.id).padStart(3,'0')}</span></td>
         <td style="font-weight:600">${m.name}</td>
         <td><span style="font-size:10px;color:var(--text-muted)">${(m.plan||'').replace('Plan ','')}</span></td>
         <td>${fmtDate(m.expiry)}</td>
@@ -1394,7 +1469,7 @@ function renderMembersPage() {
   const fp  = (document.getElementById('m-fplan') ? document.getElementById('m-fplan').value : '')   || '';
 
   let data = membersData.filter(m => {
-    const qm = !q || (m.name ? m.name.toLowerCase() : '').includes(q) || (m.plan||'').toLowerCase().includes(q) || (m.phone||'').includes(q);
+    const qm = !q || (m.name ? m.name.toLowerCase() : '').includes(q) || (m.customId||'').toLowerCase().includes(q) || (m.plan||'').toLowerCase().includes(q) || (m.phone||'').includes(q);
     const sm = !fs || getStatus(m.expiry).label === fs;
     const pm = !fp || m.plan === fp;
     return qm && sm && pm;
@@ -1435,7 +1510,7 @@ function renderMembersPage() {
       ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(57,229,106,.1);color:#39e56a;border:1px solid rgba(57,229,106,.2)">🔄 Renewed</span>`
       : '';
     return `<tr>
-      <td><span style="font-size:10px;font-weight:700;color:var(--accent);font-family:var(--font-d)">M-${String(m.id).padStart(3,'0')}</span></td>
+      <td><span style="font-size:10px;font-weight:700;color:var(--accent);font-family:var(--font-d)">${m.customId || 'M-'+String(m.id).padStart(3,'0')}</span></td>
       <td style="font-weight:600">${m.name||'—'} ${renewBadge}</td>
       <td><span style="font-size:10px;color:var(--text-muted);background:rgba(255,255,255,.05);padding:2px 7px;border-radius:5px;border:1px solid var(--border)">${(m.plan||'').replace('Plan ','')}</span></td>
       <td style="font-size:11px;color:var(--text-muted)">${m.duration||'Monthly'}</td>
@@ -1502,14 +1577,16 @@ async function renderAttendancePage() {
   const mCount = document.getElementById('att-m-count');
   if (mCount) mCount.textContent = `${mPresent}/${membersData.length}`;
   const mTbody = document.getElementById('att-members-tbody');
+  const exNotes = rec.exerciseNotes || (rec.data && rec.data.exerciseNotes) || {};
   if (mTbody) mTbody.innerHTML = membersData.map(m => {
     const status   = getAtt(mAtt, m.id);
     const exDone   = (exRec[m.id] || exRec[String(m.id)] || []);
+    const otherNote = exNotes[m.id] || exNotes[String(m.id)] || '';
     const exBadges = exDone.length
-      ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${exDone.map(e=>`<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(57,229,106,.1);color:#39e56a;border:1px solid rgba(57,229,106,.2)">${e}</span>`).join('')}</div>`
+      ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${exDone.map(e=>`<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(57,229,106,.1);color:#39e56a;border:1px solid rgba(57,229,106,.2)">${e === 'Others' && otherNote ? 'Others: '+otherNote : e}</span>`).join('')}</div>`
       : '';
     return `<tr>
-      <td><span style="font-size:10px;font-weight:700;color:var(--accent);font-family:var(--font-d)">M-${String(m.id).padStart(3,'0')}</span></td>
+      <td><span style="font-size:10px;font-weight:700;color:var(--accent);font-family:var(--font-d)">${m.customId || 'M-'+String(m.id).padStart(3,'0')}</span></td>
       <td style="font-weight:600">${m.name||'—'}<br>${exBadges}</td>
       <td style="font-size:10px;color:var(--text-muted)">${(m.plan||'').replace('Plan ','')}${m.exerciseCategory?` <span style="background:rgba(192,132,252,.12);color:#c084fc;border:1px solid rgba(192,132,252,.25);padding:1px 5px;border-radius:3px;font-size:9px">Cat ${m.exerciseCategory}</span>`:''}</td>
       <td>${statusBadge(status)}</td>
@@ -1647,7 +1724,7 @@ const CAT_COLORS = {A:'#39e56a',B:'#4da6ff',C:'#f5a623',D:'#c084fc',E:'#e56339',
 /* ════════════════════════════════════════
    ANALYTICS PAGE
 ════════════════════════════════════════ */
-function renderAnalyticsPage() {
+async function renderAnalyticsPage() {
   if (!membersData.length) {
     ['admin-cat-grid','admin-cat-detail','admin-ex-today','admin-att-by-cat'].forEach(id => {
       const el = document.getElementById(id);
@@ -1662,43 +1739,72 @@ function renderAnalyticsPage() {
   const exRec    = attRec.exercises  || (attRec.data && attRec.data.exercises) || {};
   const totalMem = membersData.length;
 
-  /* ── Category Distribution Cards ── */
+  /* ── Exercise List (all exercises — default + custom from Firestore) ── */
   const catGrid = document.getElementById('admin-cat-grid');
   if (catGrid) {
-    catGrid.innerHTML = Object.keys(EXERCISE_CATEGORIES).map(cat => {
-      const count   = membersData.filter(m => m.exerciseCategory === cat).length;
-      const pct     = totalMem ? Math.round(count/totalMem*100) : 0;
-      const color   = CAT_COLORS[cat];
-      const present = membersData.filter(m => m.exerciseCategory === cat && (mAtt[m.id]||mAtt[String(m.id)]) === 'present').length;
-      return `<div class="cat-stat-card" style="border-top:2px solid ${color}">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div class="cat-letter" style="color:${color}">Cat ${cat}</div>
-          <div style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${color}22;color:${color}">${pct}%</div>
-        </div>
-        <div class="cat-count">${count} <span style="font-size:12px;color:var(--text-muted);font-weight:400">members</span></div>
-        <div class="cat-members">${present} present today · ${EXERCISE_CATEGORIES[cat].filter(e=>e!=='Rest').length} exercises</div>
-        <div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%;background:linear-gradient(90deg,${color},${color}88)"></div></div>
-      </div>`;
-    }).join('');
+    // Load custom exercises from Firestore if available
+    let customExercises = [];
+    if (firestoreDB) {
+      try {
+        const snap = await firestoreDB.collection('config').doc('customExercises').get();
+        if (snap.exists) customExercises = snap.data().exercises || [];
+      } catch(e) {}
+    }
+    const defaults = [
+      'Calf & Abs & Fore Arms','Chest & Abs','Chest & Triceps & Abs',
+      'Biceps & Fore Arms','Lats','Lats & Abs','Lats & Calf',
+      'Shoulder & Biceps & Abs','Shoulder & Fore Arms',
+      'Thighs','Thighs & Calf','Thighs & Lats & Abs','Triceps & Abs'
+    ];
+    const allExercises = [...new Set([...defaults, ...customExercises])].sort();
+    catGrid.innerHTML = `
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">
+        💪 Exercise List (${allExercises.length} total)
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${defaults.map(e => `<span style="font-size:11px;padding:3px 10px;background:rgba(57,229,106,.08);border:1px solid rgba(57,229,106,.2);border-radius:20px;color:var(--text-primary)">${e}</span>`).join('')}
+        ${customExercises.map(e => `<span style="font-size:11px;padding:3px 10px;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.3);border-radius:20px;color:#f5a623">${e} <span style="font-size:9px;opacity:.7">custom</span></span>`).join('')}
+      </div>
+      ${customExercises.length === 0 ? `<div style="font-size:11px;color:var(--text-muted);margin-top:8px;font-style:italic">No custom exercises added yet. Use Gym Portal → Attendance → Manage Exercises to add.</div>` : ''}
+    `;
   }
 
-  /* ── Category Details (all exercises listed) ── */
+  /* ── Category Detail panel — replaced with attendance summary ── */
   const catDetail = document.getElementById('admin-cat-detail');
   if (catDetail) {
-    catDetail.innerHTML = Object.entries(EXERCISE_CATEGORIES).map(([cat, exercises]) => {
-      const count = membersData.filter(m => m.exerciseCategory === cat).length;
-      const color = CAT_COLORS[cat];
-      return `<div style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-family:var(--font-d);font-size:16px;font-weight:900;color:${color}">Category ${cat}</span>
-          <span style="font-size:10px;color:var(--text-muted)">${count} members</span>
+    const totalMembers = membersData.length;
+    const presentToday = membersData.filter(m => (mAtt[m.id]||mAtt[String(m.id)]) === 'present').length;
+    const absentToday  = membersData.filter(m => (mAtt[m.id]||mAtt[String(m.id)]) === 'absent').length;
+    const lateToday    = membersData.filter(m => (mAtt[m.id]||mAtt[String(m.id)]) === 'late').length;
+    const unmarked     = totalMembers - presentToday - absentToday - lateToday;
+    const pct = totalMembers ? Math.round(presentToday/totalMembers*100) : 0;
+    catDetail.innerHTML = `
+      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">📋 Today's Attendance Summary</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">
+        <div style="text-align:center;padding:10px;background:rgba(57,229,106,.06);border:1px solid rgba(57,229,106,.15);border-radius:8px">
+          <div style="font-size:20px;font-weight:900;color:#39e56a">${presentToday}</div>
+          <div style="font-size:10px;color:var(--text-muted)">Present</div>
         </div>
-        ${exercises.map((ex, i) => `<div class="ex-list-item">
-          <div class="ex-dot" style="background:${ex==='Rest'?'var(--danger)':color}"></div>
-          <span style="color:${ex==='Rest'?'var(--danger)':'var(--text-primary)'}">${i+1}. ${ex}</span>
-        </div>`).join('')}
-      </div>`;
-    }).join('');
+        <div style="text-align:center;padding:10px;background:rgba(229,57,53,.06);border:1px solid rgba(229,57,53,.15);border-radius:8px">
+          <div style="font-size:20px;font-weight:900;color:#e53935">${absentToday}</div>
+          <div style="font-size:10px;color:var(--text-muted)">Absent</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.15);border-radius:8px">
+          <div style="font-size:20px;font-weight:900;color:#f5a623">${lateToday}</div>
+          <div style="font-size:10px;color:var(--text-muted)">Late</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px">
+          <div style="font-size:20px;font-weight:900;color:var(--text-muted)">${unmarked}</div>
+          <div style="font-size:10px;color:var(--text-muted)">Not Marked</div>
+        </div>
+      </div>
+      <div style="height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;display:flex;margin-bottom:6px">
+        <div style="width:${pct}%;background:#39e56a;transition:width .5s"></div>
+        <div style="width:${totalMembers?Math.round(lateToday/totalMembers*100):0}%;background:#f5a623"></div>
+        <div style="width:${totalMembers?Math.round(absentToday/totalMembers*100):0}%;background:#e53935"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);text-align:center">${pct}% attendance rate today</div>
+    `;
   }
 
   /* ── Most Done Exercises Today ── */
@@ -1706,11 +1812,13 @@ function renderAnalyticsPage() {
   const attDatePill = document.getElementById('admin-att-date-pill');
   if (attDatePill) attDatePill.textContent = fmtDate(today);
   if (exTodayEl) {
-    // Count how many members did each exercise today
     const exerciseCounts = {};
+    const exNotes = attRec.exerciseNotes || (attRec.data && attRec.data.exerciseNotes) || {};
     Object.entries(exRec).forEach(([memberId, exList]) => {
       (exList||[]).forEach(ex => {
-        exerciseCounts[ex] = (exerciseCounts[ex]||0) + 1;
+        // For "Others", append the typed text if available
+        const label = (ex === 'Others' && exNotes[memberId]) ? `Others: ${exNotes[memberId]}` : ex;
+        exerciseCounts[label] = (exerciseCounts[label]||0) + 1;
       });
     });
     const sorted = Object.entries(exerciseCounts).sort((a,b)=>b[1]-a[1]);
@@ -1727,39 +1835,32 @@ function renderAnalyticsPage() {
     }
   }
 
-  /* ── Attendance by Category ── */
+  /* ── Member Exercise Log (per-member breakdown) ── */
   const attByCat = document.getElementById('admin-att-by-cat');
   if (attByCat) {
-    const rows = Object.keys(EXERCISE_CATEGORIES).map(cat => {
-      const mems    = membersData.filter(m => m.exerciseCategory === cat);
-      const total   = mems.length;
-      if (!total) return '';
-      const present = mems.filter(m => (mAtt[m.id]||mAtt[String(m.id)]) === 'present').length;
-      const absent  = mems.filter(m => (mAtt[m.id]||mAtt[String(m.id)]) === 'absent').length;
-      const late    = mems.filter(m => (mAtt[m.id]||mAtt[String(m.id)]) === 'late').length;
-      const nomark  = total - present - absent - late;
-      const pct     = Math.round(present/total*100);
-      const color   = CAT_COLORS[cat];
-      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(255,255,255,.02);border-radius:9px;margin-bottom:8px">
-        <div style="font-family:var(--font-d);font-size:20px;font-weight:900;color:${color};width:30px;flex-shrink:0">Cat ${cat}</div>
-        <div style="flex:1">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-            <span style="font-size:12px;font-weight:600;color:var(--text-primary)">${total} members</span>
-            <span style="font-size:10px;color:#39e56a">✅ ${present}</span>
-            <span style="font-size:10px;color:#e53935">❌ ${absent}</span>
-            <span style="font-size:10px;color:#f5a623">⏰ ${late}</span>
-            <span style="font-size:10px;color:var(--text-muted)">⬜ ${nomark}</span>
-          </div>
-          <div style="height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;display:flex">
-            <div style="width:${Math.round(present/total*100)}%;background:#39e56a;transition:width .5s"></div>
-            <div style="width:${Math.round(late/total*100)}%;background:#f5a623;transition:width .5s"></div>
-            <div style="width:${Math.round(absent/total*100)}%;background:#e53935;transition:width .5s"></div>
-          </div>
+    const exNotes2 = attRec.exerciseNotes || (attRec.data && attRec.data.exerciseNotes) || {};
+    const rows = membersData.map(m => {
+      const status  = mAtt[m.id] || mAtt[String(m.id)] || 'Not Marked';
+      const exDone  = exRec[m.id] || exRec[String(m.id)] || [];
+      const note    = exNotes2[m.id] || exNotes2[String(m.id)] || '';
+      const dispId  = m.customId || `M-${String(m.id).padStart(3,'0')}`;
+      const statusColor = status==='present'?'#39e56a':status==='absent'?'#e53935':status==='late'?'#f5a623':'var(--text-muted)';
+      const statusIcon  = status==='present'?'✅':status==='absent'?'❌':status==='late'?'⏰':'⬜';
+      const exBadges = exDone.map(e =>
+        `<span style="font-size:9px;padding:1px 6px;border-radius:4px;background:rgba(57,229,106,.1);color:#39e56a;border:1px solid rgba(57,229,106,.2)">${e === 'Others' && note ? 'Others: '+note : e}</span>`
+      ).join(' ');
+      return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(255,255,255,.02);border-radius:8px;margin-bottom:5px;border-left:3px solid ${statusColor}">
+        <div style="flex-shrink:0;min-width:70px">
+          <div style="font-size:9.5px;font-weight:700;color:var(--accent)">${dispId}</div>
+          <div style="font-size:11.5px;font-weight:600;color:var(--text-primary)">${m.name||'—'}</div>
         </div>
-        <div style="font-size:14px;font-weight:700;color:${color};flex-shrink:0">${pct}%</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;flex-wrap:wrap;gap:3px">${exBadges || '<span style="font-size:10px;color:var(--text-muted);font-style:italic">No exercises recorded</span>'}</div>
+        </div>
+        <div style="flex-shrink:0;font-size:11px;font-weight:700;color:${statusColor}">${statusIcon} ${status.charAt(0).toUpperCase()+status.slice(1)}</div>
       </div>`;
-    }).filter(Boolean).join('');
-    attByCat.innerHTML = rows || '<div style="color:var(--text-muted);font-size:12px;padding:12px 0">No members assigned to categories yet.</div>';
+    }).join('');
+    attByCat.innerHTML = rows || '<div style="color:var(--text-muted);font-size:12px;padding:12px 0">No members found.</div>';
   }
 }
 
@@ -1807,7 +1908,21 @@ function loadProfilePage() {
   loadAdminUsers();
 }
 
-/* ── Today button ── */
+function changeSecretCode() {
+  const authPass = document.getElementById('sc-auth-pass').value;
+  const newCode  = document.getElementById('sc-new').value.trim();
+  const conf     = document.getElementById('sc-conf').value.trim();
+  const msg      = document.getElementById('sc-msg');
+  if (authPass !== getAdminPass()) { msg.style.color='var(--danger)'; msg.textContent='❌ Incorrect admin password.'; return; }
+  if (!newCode || newCode.length < 4) { msg.style.color='var(--danger)'; msg.textContent='❌ Code must be at least 4 characters.'; return; }
+  if (newCode !== conf) { msg.style.color='var(--danger)'; msg.textContent='❌ Codes do not match.'; return; }
+  setSecretCode(newCode);
+  ['sc-auth-pass','sc-new','sc-conf'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  msg.style.color='var(--success)'; msg.textContent=`✅ Secret code updated! New code: ${newCode}`;
+  showToast('✅ Secret code updated!', 'ok');
+}
+
+
 function gotoToday() {
   const d = document.getElementById('att-page-date');
   if (d) { d.value = todayStr(); renderAttendancePage(); }

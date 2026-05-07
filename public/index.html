@@ -1149,6 +1149,20 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);di
         </div>
         <input type="text" id="att-search" class="att-search" placeholder="Search name / member ID…" oninput="renderAttendance()">
         <button class="btn btn-ghost btn-sm" onclick="exportAttendance()">⬇ Export</button>
+        <button class="btn btn-primary btn-sm" onclick="toggleAddExerciseBar()" title="Add or manage exercises shown on attendance">💪 Manage Exercises</button>
+      </div>
+      <div id="add-exercise-bar" style="display:none;align-items:center;gap:8px;padding:10px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px">
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px">💪 Exercise List — Add New Exercise</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="new-exercise-input" placeholder="e.g. Pull-ups, Battle Ropes, Cable Fly…"
+              style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text-primary);font-size:12.5px;outline:none;font-family:var(--font-b)"
+              onkeydown="if(event.key==='Enter')addExercise()">
+            <button class="btn btn-primary btn-sm" onclick="addExercise()">✅ Add</button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleAddExerciseBar()">✕ Close</button>
+          </div>
+          <div id="exercise-list-preview" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:5px"></div>
+        </div>
       </div>
       <div class="att-summary" id="att-summary"></div>
       <div class="att-grid" id="att-grid"></div>
@@ -1430,22 +1444,6 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);di
         <div class="plan-option" onclick="selPlan('Plan B Cardio',PRICING['Plan B Cardio'],this)"><div class="po-name">Plan B · Cardio</div><div class="po-price" id="po-pBc">₹1,700</div><div class="po-sub">Hydraulic</div></div>
       </div>
       <input type="hidden" id="f-plan" value="Plan A Strength">
-    </div>
-    <div class="form-group">
-      <label>Exercise Category *
-        <span style="font-size:9px;color:var(--text-muted);font-weight:400;margin-left:4px">— Which training type does this member follow?</span>
-      </label>
-      <div class="ex-cat-grid" id="ex-cat-grid">
-        <div class="ex-cat-btn selected" onclick="selectExCat('A',this)"><div class="ex-cat-letter">A</div><div class="ex-cat-label">7 exercises</div></div>
-        <div class="ex-cat-btn" onclick="selectExCat('B',this)"><div class="ex-cat-letter">B</div><div class="ex-cat-label">7 exercises</div></div>
-        <div class="ex-cat-btn" onclick="selectExCat('C',this)"><div class="ex-cat-letter">C</div><div class="ex-cat-label">7 exercises</div></div>
-        <div class="ex-cat-btn" onclick="selectExCat('D',this)"><div class="ex-cat-letter">D</div><div class="ex-cat-label">7 exercises</div></div>
-        <div class="ex-cat-btn" onclick="selectExCat('E',this)"><div class="ex-cat-letter">E</div><div class="ex-cat-label">7 exercises</div></div>
-        <div class="ex-cat-btn" onclick="selectExCat('F',this)"><div class="ex-cat-letter">F</div><div class="ex-cat-label">5 exercises</div></div>
-      </div>
-      <!-- Preview of exercises in selected category -->
-      <div id="ex-cat-preview" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--text-muted);margin-top:6px;line-height:1.8"></div>
-      <input type="hidden" id="f-ex-cat" value="A">
     </div>
     <div class="form-group">
       <label>Membership Duration *</label>
@@ -2802,7 +2800,6 @@ function renderMembersTable() {
       <td><div class="name-cell"><div class="av" style="background:${avColor(m.id)}">${m.avatar}</div>${m.name}</div></td>
       <td>
         <span class="plan-tag">${m.plan.replace('Plan ','')}</span>
-        ${m.exerciseCategory ? `<span class="cat-badge" style="margin-left:4px">${m.exerciseCategory}</span>` : ''}
       </td>
       <td class="col-hide-mobile"><span style="font-size:10px;color:var(--text-muted)">${m.duration||'Monthly'}</span></td>
       <td class="col-hide-mobile">${fmtDate(m.joinDate)}</td>
@@ -2896,7 +2893,7 @@ function renderPayments() {
   const tot=data.length,pages=Math.max(1,Math.ceil(tot/PAY_PS));
   payPage=Math.min(payPage,pages);
   const sl=data.slice((payPage-1)*PAY_PS,payPage*PAY_PS);
-  document.getElementById('pay-tbody').innerHTML=sl.map(m=>{const st=getStatus(m.expiry);const pd=new Date(m.expiry);pd.setMonth(pd.getMonth()-(m.durationMonths||1));return `<tr><td><div class="name-cell"><div class="av" style="background:${avColor(m.id)}">${m.avatar}</div>${m.name}</div></td><td><span class="plan-tag">${m.plan.replace('Plan ','')}</span></td><td style="color:var(--text-muted);font-size:11px">${m.duration||'Monthly'}</td><td style="color:var(--accent);font-weight:600">₹${m.paid.toLocaleString('en-IN')}</td><td>${fmtDate(pd.toISOString().split('T')[0])}</td><td style="font-size:11px;color:var(--text-muted)">${m.method||'Cash'}</td><td><span class="status-badge ${st.cls}">${st.icon} ${st.label}</span></td><td><button class="btn btn-xs btn-ghost" onclick="showToast('🧾 Receipt printed!')">🧾 Receipt</button></td></tr>`;}).join('')||'<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text-muted)">No records</td></tr>';
+  document.getElementById('pay-tbody').innerHTML=sl.map(m=>{const st=getStatus(m.expiry);const pd=new Date(m.expiry);pd.setMonth(pd.getMonth()-(m.durationMonths||1));const dispId=m.customId||`M-${String(m.id).padStart(3,'0')}`;return `<tr><td><div class="name-cell"><div class="av" style="background:${avColor(m.id)}">${m.avatar}</div>${m.name}</div></td><td style="font-size:10px;color:var(--accent);font-weight:700">${dispId}</td><td><span class="plan-tag">${m.plan.replace('Plan ','')}</span></td><td style="color:var(--text-muted);font-size:11px">${m.duration||'Monthly'}</td><td style="color:var(--accent);font-weight:600">₹${m.paid.toLocaleString('en-IN')}</td><td>${fmtDate(pd.toISOString().split('T')[0])}</td><td style="font-size:11px;color:var(--text-muted)">${m.method||'Cash'}</td><td><span class="status-badge ${st.cls}">${st.icon} ${st.label}</span></td><td><button class="btn btn-xs btn-ghost" onclick="printReceipt(${m.id})">🧾 Receipt</button></td></tr>`;}).join('')||'<tr><td colspan="9" style="text-align:center;padding:16px;color:var(--text-muted)">No records</td></tr>';
   renderPager('pay-pginfo','pay-pgbtns',payPage,pages,tot,PAY_PS,p=>{payPage=p;renderPayments();});
 }
 
@@ -3086,8 +3083,7 @@ function renderAttendance() {
     const st     = (rec.members && rec.members[p.id]) || 'nomark';
     const col    = avColor(p.id);
     const dispId = p.customId || `M-${String(p.id).padStart(3,'0')}`;
-    const cat    = p.exerciseCategory || '';
-    const exercises = cat ? EXERCISE_CATEGORIES[cat] || [] : [];
+    const exercises = getAllExercises(); // ALL exercises for all members
     const savedEx   = (rec.exercises && rec.exercises[p.id]) || [];
     const hasOthers = savedEx.includes('Others');
 
@@ -3120,7 +3116,7 @@ function renderAttendance() {
       </div>`;
 
       exPanel = `<div class="ex-check-panel" id="exp-${p.id}">
-        <div class="ex-check-title">Category ${cat} <span class="cat-badge">${cat}</span></div>
+        <div class="ex-check-title">Today's Exercises</div>
         <div class="ex-check-list">${checks}${othersBox}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:5px;font-style:italic">✏️ Tick at least one exercise to enable Present</div>
       </div>`;
@@ -3362,8 +3358,190 @@ function buildAnalyticsCharts() {
 }
 
 /* ════════════════════════════════════════
-   MEMBER MODAL — ADD / EDIT
+   RECEIPT PRINTING
 ════════════════════════════════════════ */
+function printReceipt(memberId) {
+  const m = memberStore.find(x => x.id === memberId);
+  if (!m) return;
+  const dispId   = m.customId || `M-${String(m.id).padStart(3,'0')}`;
+  const joinDate = fmtDate(m.joinDate);
+  const expDate  = fmtDate(m.expiry);
+  const issueDate= fmtDate(todayStr());
+  const receiptNo= `RCP-${dispId}-${Date.now().toString().slice(-6)}`;
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Receipt — ${m.name}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111;padding:20px}
+  .receipt{max-width:420px;margin:0 auto;border:2px solid #111;border-radius:8px;overflow:hidden}
+  .header{background:#0d1a10;color:#39e56a;padding:18px 20px;text-align:center}
+  .gym-logo{font-size:32px;font-weight:900;letter-spacing:.1em;color:#39e56a}
+  .gym-sub{font-size:11px;color:#7ab882;margin-top:2px;letter-spacing:.08em}
+  .receipt-title{background:#1a3022;color:#fff;text-align:center;padding:8px;font-size:13px;font-weight:700;letter-spacing:.15em}
+  .body{padding:18px 20px}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px dashed #ddd}
+  .row:last-child{border-bottom:none}
+  .lbl{font-size:11.5px;color:#555;font-weight:500}
+  .val{font-size:12px;color:#111;font-weight:700;text-align:right;max-width:55%}
+  .amount-row{background:#f0faf2;border-radius:6px;padding:12px 14px;margin:14px 0;display:flex;justify-content:space-between;align-items:center;border:1px solid #39e56a}
+  .amount-lbl{font-size:13px;font-weight:700;color:#1a3022}
+  .amount-val{font-size:22px;font-weight:900;color:#0d7a2e}
+  .footer{background:#f6fef8;padding:12px 20px;text-align:center;font-size:10px;color:#777;border-top:1px dashed #ddd}
+  .footer strong{color:#0d7a2e}
+  .stamp{display:inline-block;border:2px solid #39e56a;border-radius:4px;padding:3px 10px;font-size:10px;font-weight:700;color:#0d7a2e;letter-spacing:.1em;margin-top:8px}
+  @media print{body{padding:0}.receipt{border:2px solid #111;border-radius:0}}
+</style>
+</head>
+<body>
+<div class="receipt">
+  <div class="header">
+    <div class="gym-logo">⚡ A.S. FITNESS</div>
+    <div class="gym-sub">UNISEX GYM · PREMIUM MEMBERSHIP</div>
+  </div>
+  <div class="receipt-title">🧾 MEMBERSHIP RECEIPT</div>
+  <div class="body">
+    <div class="row"><span class="lbl">Receipt No.</span><span class="val">${receiptNo}</span></div>
+    <div class="row"><span class="lbl">Issue Date</span><span class="val">${issueDate}</span></div>
+    <div class="row"><span class="lbl">Member ID</span><span class="val" style="color:#1a66cc;font-size:13px">${dispId}</span></div>
+    <div class="row"><span class="lbl">Member Name</span><span class="val">${m.name}</span></div>
+    <div class="row"><span class="lbl">Phone</span><span class="val">${m.phone || '—'}</span></div>
+    <div class="row"><span class="lbl">Membership Plan</span><span class="val">${m.plan}</span></div>
+    <div class="row"><span class="lbl">Exercise Category</span><span class="val">Category ${m.exerciseCategory || '—'}</span></div>
+    <div class="row"><span class="lbl">Duration</span><span class="val">${m.duration || 'Monthly'} (${m.durationMonths || 1} month${(m.durationMonths||1)>1?'s':''})</span></div>
+    <div class="row"><span class="lbl">Join Date</span><span class="val">${joinDate}</span></div>
+    <div class="row"><span class="lbl">Valid Until</span><span class="val" style="color:#c0392b">${expDate}</span></div>
+    <div class="row"><span class="lbl">Payment Method</span><span class="val">${m.method || 'Cash'}</span></div>
+    ${m.lastRenewal ? `<div class="row"><span class="lbl">Last Renewal</span><span class="val">${fmtDate(m.lastRenewal)}</span></div>` : ''}
+    <div class="amount-row">
+      <span class="amount-lbl">💰 Amount Paid</span>
+      <span class="amount-val">₹${(m.paid||0).toLocaleString('en-IN')}</span>
+    </div>
+    ${m.notes ? `<div style="font-size:11px;color:#555;padding:6px 0;font-style:italic">Notes: ${m.notes}</div>` : ''}
+    <div style="text-align:center;margin-top:6px"><div class="stamp">✅ PAYMENT RECEIVED</div></div>
+  </div>
+  <div class="footer">
+    <div>Thank you for choosing <strong>A.S. Fitness</strong>! Stay Fit, Stay Healthy. 💪</div>
+    <div style="margin-top:4px">📍 A.S. Fitness Unisex Gym · Owner: Shankar · 🥇 Mr. Tamil Nadu</div>
+    <div style="margin-top:4px;color:#aaa">This is a computer-generated receipt. No signature required.</div>
+  </div>
+</div>
+\u003Cscript\u003Ewindow.onload=function(){window.print();}\u003C/script\u003E
+</body>
+</html>`;
+  const w = window.open('', '_blank', 'width=500,height=700');
+  w.document.write(html);
+  w.document.close();
+}
+
+/* ════════════════════════════════════════
+   UNIFIED EXERCISE LIST (all categories combined + custom)
+════════════════════════════════════════ */
+const CUSTOM_EXERCISES_KEY = 'asfit_custom_exercises';
+
+function getAllExercises() {
+  // Default exercises (combined from all categories, deduplicated, sorted)
+  const defaults = [
+    'Chest & Abs', 'Biceps & Fore Arms', 'Triceps & Abs',
+    'Shoulder & Fore Arms', 'Lats & Abs', 'Thighs & Calf',
+    'Lats & Calf', 'Thighs', 'Lats',
+    'Chest & Triceps & Abs', 'Thighs & Lats & Abs',
+    'Shoulder & Biceps & Abs', 'Calf & Abs & Fore Arms'
+  ];
+  // Custom exercises added by gym owner
+  let custom = [];
+  try { custom = JSON.parse(localStorage.getItem(CUSTOM_EXERCISES_KEY) || '[]'); } catch(e) {}
+  // Merge, deduplicate, sort
+  const all = [...new Set([...defaults, ...custom])].sort();
+  return all;
+}
+
+function saveCustomExercises(list) {
+  try { localStorage.setItem(CUSTOM_EXERCISES_KEY, JSON.stringify(list)); } catch(e) {}
+  // Also sync to Firestore if connected
+  if (firestoreDB) {
+    firestoreDB.collection('config').doc('customExercises')
+      .set({ exercises: list }, { merge: true }).catch(() => {});
+  }
+}
+
+function toggleAddExerciseBar() {
+  const bar = document.getElementById('add-exercise-bar');
+  if (!bar) return;
+  const isOpen = bar.style.display === 'flex';
+  bar.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen) {
+    setTimeout(() => document.getElementById('new-exercise-input').focus(), 50);
+    renderExerciseListPreview();
+  }
+}
+
+function renderExerciseListPreview() {
+  const el = document.getElementById('exercise-list-preview');
+  if (!el) return;
+  const defaults = [
+    'Calf & Abs & Fore Arms','Chest & Abs','Chest & Triceps & Abs',
+    'Biceps & Fore Arms','Lats','Lats & Abs','Lats & Calf',
+    'Shoulder & Biceps & Abs','Shoulder & Fore Arms',
+    'Thighs','Thighs & Calf','Thighs & Lats & Abs',
+    'Triceps & Abs'
+  ];
+  let custom = [];
+  try { custom = JSON.parse(localStorage.getItem(CUSTOM_EXERCISES_KEY) || '[]'); } catch(e) {}
+  const all = getAllExercises();
+
+  el.innerHTML = `<div style="font-size:10px;color:var(--text-muted);width:100%;margin-bottom:6px;font-weight:600">
+    Current exercises (${all.length}) — <span style="color:var(--accent)">green = default</span>, <span style="color:#f5a623">orange = custom (deletable)</span>
+  </div>` +
+  all.map(e => {
+    const isDefault = defaults.includes(e);
+    const color  = isDefault ? 'rgba(57,229,106,.08)' : 'rgba(245,166,35,.08)';
+    const border = isDefault ? 'rgba(57,229,106,.25)'  : 'rgba(245,166,35,.35)';
+    const text   = isDefault ? 'var(--text-primary)'   : '#f5a623';
+    const delBtn = isDefault
+      ? `<span title="Default exercise — cannot delete" style="color:var(--text-muted);font-size:10px;cursor:default;opacity:.4">🔒</span>`
+      : `<button onclick="deleteExercise('${e.replace(/'/g,"\\'")}',this)" title="Delete this exercise"
+           style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:13px;line-height:1;padding:0;margin-left:2px">✕</button>`;
+    return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;background:${color};border:1px solid ${border};border-radius:20px;color:${text}">${e}${delBtn}</span>`;
+  }).join('');
+}
+
+
+function deleteExercise(name) {
+  let custom = [];
+  try { custom = JSON.parse(localStorage.getItem(CUSTOM_EXERCISES_KEY) || '[]'); } catch(e) {}
+  const idx = custom.findIndex(e => e === name);
+  if (idx < 0) { showToast(`⚠ "${name}" is a default exercise and cannot be deleted.`, true); return; }
+  custom.splice(idx, 1);
+  saveCustomExercises(custom);
+  showToast(`🗑 "${name}" removed from exercises.`);
+  renderExerciseListPreview();
+  renderAttendance();
+}
+
+
+function addExercise() {
+  const inp = document.getElementById('new-exercise-input');
+  if (!inp) return;
+  const name = inp.value.trim();
+  if (!name) { showToast('⚠ Enter an exercise name.', true); return; }
+  let custom = [];
+  try { custom = JSON.parse(localStorage.getItem(CUSTOM_EXERCISES_KEY) || '[]'); } catch(e) {}
+  const all = getAllExercises();
+  if (all.map(e => e.toLowerCase()).includes(name.toLowerCase())) {
+    showToast(`⚠ "${name}" already exists.`, true); return;
+  }
+  custom.push(name);
+  saveCustomExercises(custom);
+  inp.value = '';
+  showToast(`✅ "${name}" added to exercises!`);
+  renderExerciseListPreview();
+  renderAttendance();
+}
+
+
 let selPlanVal='Plan A Strength', selPlanPrice=1000;
 let selDurMonths=1, selDurLabel='Monthly';
 let editingMemberId=null;
@@ -3429,7 +3607,6 @@ function openAddMemberModal(plan=null, price=null) {
   document.getElementById('f-paid').value=calcTotalFee();
   document.getElementById('fee-hint').textContent=`₹${selPlanPrice.toLocaleString('en-IN')}/mo × 1mo`;
   recalcExpiry();
-  initExCatSelector('A');
   document.getElementById('member-modal').classList.add('open');
 }
 
@@ -3457,7 +3634,6 @@ function editMember(id) {
   document.querySelectorAll('.dur-option').forEach((o,i)=>o.classList.toggle('selected',durs[i]===selDurMonths));
   document.getElementById('fee-hint').textContent=`₹${selPlanPrice.toLocaleString('en-IN')}/mo × ${selDurMonths}mo`;
   document.getElementById('expiry-preview-text').textContent=`${selDurLabel} plan · Expires on ${fmtDate(m.expiry)}`;
-  initExCatSelector(m.exerciseCategory || 'A');
   document.getElementById('member-modal').classList.add('open');
 }
 
@@ -3512,7 +3688,6 @@ function saveMember() {
   if (!join)     { showToast('⚠ Join date is required.', true); return; }
   if (!expiry)   { showToast('⚠ Expiry date is required.', true); return; }
   if (!paid)     { showToast('⚠ Fee paid amount is required.', true); document.getElementById('f-paid').focus(); return; }
-  if (!selExCat) { showToast('⚠ Exercise category is required.', true); return; }
 
   // Check for duplicate custom ID (only on new members)
   if (!editingMemberId) {
@@ -3532,7 +3707,6 @@ function saveMember() {
     method: document.getElementById('f-method').value,
     notes: document.getElementById('f-notes').value.trim(),
     avatar: initials(name),
-    exerciseCategory: document.getElementById('f-ex-cat').value || selExCat || 'A',
   };
 
   if (editingMemberId) {
