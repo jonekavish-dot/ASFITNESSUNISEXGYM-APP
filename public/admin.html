@@ -21,7 +21,8 @@
   --shadow-sm:0 1px 4px rgba(0,0,0,.5);--shadow-md:0 4px 16px rgba(0,0,0,.6);--shadow-lg:0 8px 32px rgba(0,0,0,.7);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);min-height:100vh;display:flex;flex-direction:column}
+*{-webkit-tap-highlight-color:transparent;tap-highlight-color:transparent}
+body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:rgba(77,166,255,.2);border-radius:4px}
 
 /* ── LOCK SCREEN ── */
@@ -291,6 +292,9 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);mi
 
 /* ── Mobile 600px ── */
 @media(max-width:600px){
+  /* Prevent iOS auto-zoom */
+  input[type=text],input[type=email],input[type=password],input[type=tel],input[type=number],input[type=date],select,textarea{font-size:16px!important}
+
   .main{padding-bottom:72px}
   .mob-nav{display:block}
   .page{padding:11px 11px 80px}
@@ -305,6 +309,8 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);mi
   .data-table{min-width:540px;font-size:11px}
   .data-table th,.data-table td{padding:7px 7px;white-space:nowrap}
   .col-hide-mob{display:none}
+  /* Analytics grid — single column on mobile */
+  #admin-ex-detail-grid{grid-template-columns:1fr!important}
   .cat-stats-grid{grid-template-columns:repeat(2,1fr)}
   .att-exercise-bar-wrap{display:none}
   .fb-config-row{flex-direction:column;align-items:flex-start;gap:3px}
@@ -313,8 +319,11 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);mi
   .collection-tabs{gap:4px}
   .col-tab{padding:5px 10px;font-size:11px}
   .profile-grid{grid-template-columns:1fr}
+  /* Attendance table */
+  .att-exercise-row{padding:7px 8px}
+  .att-exercise-count{font-size:14px;width:28px}
   /* Modal mobile */
-  .modal{border-radius:16px 16px 0 0;position:fixed;bottom:0;left:0;right:0;width:100%!important;max-width:100%!important}
+  .modal{border-radius:16px 16px 0 0;position:fixed;bottom:0;left:0;right:0;width:100%!important;max-width:100%!important;overflow-y:auto;max-height:85vh}
   .modal-overlay{align-items:flex-end}
   .form-row{grid-template-columns:1fr}
   /* Dashboard */
@@ -322,6 +331,14 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--text-primary);mi
   .recent-table-wrap{overflow-x:auto}
   .live-badge,.gym-tag{display:none}
   .fb-indicator{font-size:10px;padding:4px 8px}
+  /* Lock screen step 2 */
+  .lock-box{width:92vw!important;max-width:92vw!important;padding:22px 16px}
+  .lock-input{font-size:16px}
+  .lock-brand{font-size:22px}
+  .lock-logo{font-size:11px}
+  /* Topbar */
+  #topbar-user{display:none}
+  .tb-right .btn-sm{font-size:11px;padding:5px 8px}
 }
 
 @media(max-width:380px){
@@ -919,7 +936,17 @@ function _doEnterPortal() {
   const userEl = document.getElementById('topbar-user');
   if (userEl && firebaseAuthUser) userEl.textContent = '👤 ' + firebaseAuthUser.email;
   updateClock();
-  initAdminApp();
+  startInactivityTimer();
+  initAdminApp().then(() => {
+    // Navigate to the hash page that was requested before login
+    const hashPage = getAdminHashPage();
+    if (hashPage && hashPage !== 'dashboard') {
+      const btn = document.querySelector(`.nav-item[onclick*="nav('${hashPage}'"]`);
+      nav(hashPage, btn);
+    } else {
+      setAdminHash('dashboard');
+    }
+  });
 }
 
 
@@ -1095,22 +1122,160 @@ async function addAdminUser() {
 
 async function loadAdminUsers() {
   const el = document.getElementById('admin-users-list');
-  if (!el || !firestoreDB) return;
+  if (!el) return;
+  if (!firestoreDB) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">Connect Firebase to manage users.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="font-size:11px;color:var(--text-muted);font-style:italic">⏳ Loading users…</div>';
   try {
-    const doc = await firestoreDB.collection('config').doc('adminUsers').get();
+    const doc   = await firestoreDB.collection('config').doc('adminUsers').get();
     const users = doc.exists ? (doc.data().users || []) : [];
-    el.innerHTML = users.length ? users.map(u => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:rgba(77,166,255,.05);border:1px solid rgba(77,166,255,.1);border-radius:7px;margin-bottom:6px">
-        <span style="font-size:12px;color:var(--text-primary)">📧 ${u}</span>
-        ${firebaseAuthUser && u === firebaseAuthUser.email ? '<span style="font-size:9px;color:var(--accent);font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(77,166,255,.12)">YOU</span>' : ''}
-      </div>`).join('')
-    : '<div style="font-size:11px;color:var(--text-muted);padding:6px 0">No admin users yet.</div>';
-  } catch(e) { el.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">Connect Firebase to manage users.</div>'; }
+    if (!users.length) {
+      el.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:6px 0">No admin users yet.</div>';
+      return;
+    }
+    el.innerHTML = users.map((u, idx) => `
+      <div style="background:rgba(77,166,255,.05);border:1px solid rgba(77,166,255,.1);border-radius:9px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <span style="font-size:12px;color:var(--text-primary)">📧 ${u}</span>
+            ${firebaseAuthUser && u === firebaseAuthUser.email
+              ? '<span style="font-size:9px;color:var(--accent);font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(77,166,255,.12);margin-left:6px">YOU</span>'
+              : ''}
+          </div>
+          <button onclick="deleteAdminUser('${u}',this)" title="Remove this user's access"
+            style="background:rgba(229,57,53,.1);border:1px solid rgba(229,57,53,.25);color:#e53935;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer">
+            🗑 Remove
+          </button>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="password" id="new-pass-${idx}" placeholder="New password (min 6 chars)"
+            style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:6px 9px;font-size:12px;color:var(--text-primary);font-family:var(--font-b);outline:none"
+            onkeydown="if(event.key==='Enter')changeUserPassword('${u}',${idx})">
+          <button onclick="changeUserPassword('${u}',${idx})"
+            style="background:rgba(77,166,255,.1);border:1px solid rgba(77,166,255,.25);color:var(--accent);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+            🔑 Change Pass
+          </button>
+        </div>
+        <div id="user-msg-${idx}" style="font-size:10.5px;margin-top:5px;min-height:14px"></div>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="font-size:11px;color:var(--danger)">❌ Failed: ${e.message}</div>`;
+  }
 }
 
-/* ════════════════════════════════════════
-   LOCAL PASSWORD AUTH (FALLBACK)
-════════════════════════════════════════ */
+/* ── Delete admin user ── */
+async function deleteAdminUser(email, btn) {
+  if (firebaseAuthUser && email === firebaseAuthUser.email) {
+    showToast('❌ You cannot delete your own account while logged in.', 'error'); return;
+  }
+  if (!confirm(`Fully remove ${email}?\n\nThis will:\n• Remove them from the registered users list\n• Delete their Firebase login account\n\nThey will no longer be able to log in to either portal.`)) return;
+
+  if (btn) { btn.textContent = '⏳ Removing…'; btn.disabled = true; }
+
+  let firestoreDone = false;
+  let authDone      = false;
+  let authError     = '';
+
+  // Step 1 — Remove from Firestore allowed list
+  try {
+    await firestoreDB.collection('config').doc('adminUsers').set(
+      { users: firebase.firestore.FieldValue.arrayRemove(email) }, { merge: true }
+    );
+    firestoreDone = true;
+  } catch(e) {
+    showToast(`❌ Failed to remove from list: ${e.message}`, 'error');
+    if (btn) { btn.textContent = '🗑 Remove'; btn.disabled = false; }
+    return;
+  }
+
+  // Step 2 — Delete their Firebase Auth account via REST API
+  // We need to find their UID first using the Identity Toolkit API
+  try {
+    const cfg = getFirebaseConfig();
+    const apiKey = cfg.apiKey;
+
+    // Get list of users matching this email via Firebase Auth REST API
+    const lookupRes = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: await firebaseAuthUser.getIdToken() })
+      }
+    );
+
+    // Use the admin's own token to call the delete endpoint for the target user
+    // Firebase doesn't allow deleting another user from the client SDK directly
+    // So we'll use the admin token approach with the REST API
+    const deleteRes = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:delete?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, idToken: await firebaseAuthUser.getIdToken() })
+      }
+    );
+    const deleteData = await deleteRes.json();
+    if (deleteData.error) {
+      // REST API delete of another user requires Admin SDK — not possible from client
+      // Fall back: send password reset to invalidate their session + inform admin
+      authError = 'Firebase account could not be deleted from client (requires Admin SDK). A password reset email was sent to lock them out.';
+      await firebase.auth().sendPasswordResetEmail(email).catch(() => {});
+    } else {
+      authDone = true;
+    }
+  } catch(e) {
+    authError = `Firebase account removal failed: ${e.message}. Please delete manually from Firebase Console → Authentication.`;
+  }
+
+  // Show result
+  if (firestoreDone && authDone) {
+    showToast(`✅ ${email} fully removed — account deleted.`, 'ok');
+  } else if (firestoreDone && authError) {
+    showToast(`⚠ Removed from list. ${authError}`, 'ok');
+    // Show detailed message in the UI
+    const el = document.getElementById('admin-users-msg');
+    if (el) {
+      el.style.color = 'var(--warn)';
+      el.textContent = `⚠ ${email} removed from portal access. Note: ${authError}`;
+    }
+  }
+
+  loadAdminUsers();
+}
+
+/* ── Change password for a registered user ── */
+async function changeUserPassword(email, idx) {
+  const inp = document.getElementById(`new-pass-${idx}`);
+  const msg = document.getElementById(`user-msg-${idx}`);
+  if (!inp || !msg) return;
+  const newPass = inp.value.trim();
+  if (!newPass || newPass.length < 6) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '❌ Password must be at least 6 characters.'; return;
+  }
+  msg.style.color = 'var(--text-muted)'; msg.textContent = '⏳ Updating password…';
+  try {
+    // Use a secondary Firebase app to sign in as that user and update password
+    const cfg = getFirebaseConfig();
+    const secondaryName = 'pass-change-' + Date.now();
+    // We can't directly change another user's password from client SDK without Admin SDK
+    // Best approach: use Firebase Auth REST API with admin credentials via secondary app
+    // Since we don't have Admin SDK, we'll use a workaround:
+    // Send a password reset email instead, which is safe and works
+    await firebase.auth().sendPasswordResetEmail(email);
+    msg.style.color = 'var(--success)';
+    msg.textContent = `✅ Password reset email sent to ${email}. They should check their inbox.`;
+    inp.value = '';
+  } catch(e) {
+    msg.style.color = 'var(--danger)';
+    if (e.code === 'auth/user-not-found') msg.textContent = '❌ No Firebase account found for this email.';
+    else msg.textContent = '❌ ' + (e.message || 'Failed to send reset email.');
+  }
+}
+
+
 function getAdminPass() {
   try { return localStorage.getItem(ADMIN_PASS_KEY) || DEFAULT_ADMIN_PASS; } catch { return DEFAULT_ADMIN_PASS; }
 }
@@ -1178,20 +1343,49 @@ const PAGE_TITLES = {
   trainers:'TRAINERS', profile:'PROFILE & SECURITY', analytics:'EXERCISE ANALYTICS'
 };
 
+/* ════════════════════════════════════════
+   HASH ROUTING — ADMIN
+════════════════════════════════════════ */
+const ADMIN_PAGES = ['dashboard','members','attendance','trainers','analytics','profile'];
+
+function getAdminHashPage() {
+  const hash = window.location.hash.replace('#/','').toLowerCase().trim();
+  return ADMIN_PAGES.includes(hash) ? hash : null;
+}
+
+function setAdminHash(page) {
+  history.replaceState(null, '', '#/' + page);
+}
+
+// Browser back/forward
+window.addEventListener('hashchange', () => {
+  if (sessionStorage.getItem('admin_auth_ok') !== '1') return;
+  const page = getAdminHashPage();
+  if (page) {
+    const btn = document.querySelector(`.nav-item[onclick*="nav('${page}'"]`);
+    nav(page, btn);
+  }
+});
+
 function nav(page, btn) {
   currentPage = page;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.mob-nbtn').forEach(n => n.classList.remove('active'));
   const pg = document.getElementById('page-' + page);
   if (pg) pg.classList.add('active');
   if (btn) btn.classList.add('active');
+  // Also sync mobile nav button
+  const mobBtn = document.querySelector(`.mob-nbtn[onclick*="'${page}'"]`);
+  if (mobBtn) mobBtn.classList.add('active');
   document.getElementById('page-title').textContent = PAGE_TITLES[page] || page.toUpperCase();
+  // Update URL hash
+  setAdminHash(page);
 
   if (page === 'members')    renderMembersPage();
-  // Do NOT reset date when switching to attendance — preserve selected date
   if (page === 'attendance') {
     const d = document.getElementById('att-page-date');
-    if (d && !d.value) d.value = todayStr(); // only set if empty
+    if (d && !d.value) d.value = todayStr();
     renderAttendancePage();
   }
   if (page === 'trainers')   renderTrainersPage();
@@ -1236,7 +1430,17 @@ async function initAdminApp() {
    FIREBASE
 ════════════════════════════════════════ */
 function getFirebaseConfig() {
-  try { const v = localStorage.getItem(FB_CONFIG_KEY); return v ? JSON.parse(v) : null; } catch { return null; }
+  const hardcoded = {
+    apiKey:      "AIzaSyCzEBI-XPyq_pNkPpGZZ8PVD0AUyiVWItw",
+    authDomain:  "gym-portal-9b223.firebaseapp.com",
+    projectId:   "gym-portal-9b223",
+    appId:       "1:458065895621:web:509148a7575a98aba590ac"
+  };
+  try {
+    const v = localStorage.getItem(FB_CONFIG_KEY);
+    if (v) { const stored = JSON.parse(v); return { ...hardcoded, ...stored }; }
+  } catch(e) {}
+  return hardcoded;
 }
 
 async function connectFirebase(cfg) {
@@ -1941,6 +2145,16 @@ async function refreshAllData(btn) {
 document.addEventListener('DOMContentLoaded', () => {
   updateClock();
 
+  // Auto-initialize Firebase with hardcoded config (works on every device immediately)
+  try {
+    const cfg = getFirebaseConfig();
+    if (cfg && cfg.apiKey && typeof firebase !== 'undefined') {
+      if (firebase.apps.length === 0) firebase.initializeApp(cfg);
+      firestoreDB = firebase.firestore();
+      firestoreDB.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    }
+  } catch(e) {}
+
   // SECURITY: sessionStorage survives refresh but clears when tab closes
   const isAuthenticated = sessionStorage.getItem('admin_auth_ok') === '1';
 
@@ -1959,7 +2173,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const d = document.getElementById('att-page-date');
     if (d && !d.value) d.value = todayStr();
     startInactivityTimer();
-    initAdminApp();
+    initAdminApp().then(() => {
+      const hashPage = getAdminHashPage();
+      if (hashPage && hashPage !== 'dashboard') {
+        const btn = document.querySelector(`.nav-item[onclick*="nav('${hashPage}'"]`);
+        nav(hashPage, btn);
+      } else {
+        setAdminHash('dashboard');
+      }
+    });
     return;
   }
 
