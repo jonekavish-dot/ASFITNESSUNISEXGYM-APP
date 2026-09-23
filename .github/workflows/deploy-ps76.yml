@@ -1,0 +1,45 @@
+name: Deploy PS76 to Firebase
+
+# Publishes ps76/ (hosting + Firestore rules + indexes) to the ps76-gym project.
+# Needs repo secret FIREBASE_SERVICE_ACCOUNT_PS76_GYM = the service-account JSON key
+# from Firebase Console → Project settings → Service accounts → Generate new private key.
+on:
+  push:
+    branches: [main, claude/charming-pascal-z0ph7j]
+    paths: ['ps76/**', '.github/workflows/deploy-ps76.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ps76
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ps76
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Write service account key
+        env:
+          SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PS76_GYM }}
+        run: |
+          if [ -z "$SA_KEY" ]; then
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT_PS76_GYM is not set (see ps76/README.md → Deploy)."
+            exit 1
+          fi
+          printf '%s' "$SA_KEY" > "$RUNNER_TEMP/sa.json"
+
+      - name: Deploy hosting, rules and indexes
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npx --yes firebase-tools@15 deploy --only hosting,firestore:rules,firestore:indexes --project ps76-gym --non-interactive
+
+      - name: Live URL
+        run: echo "::notice::Deployed → https://ps76-gym.web.app"
