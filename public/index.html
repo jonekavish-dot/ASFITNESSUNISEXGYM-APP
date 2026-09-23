@@ -2010,6 +2010,9 @@ async function gymFirebaseLogin() {
       try { await firestoreDB.enablePersistence({ synchronizeTabs: true }); } catch(pe) {}
     }
     btn.textContent = '✅ Signed in!';
+    // The load-time connection check ran before sign-in and was rejected by the rules;
+    // re-verify now that we're authenticated so the status and sync reflect reality.
+    initFirebase(cfg);
     setTimeout(() => enterGymPortal(), 400);
   } catch(e) {
     btn.textContent = '🔥 Sign In with Firebase'; btn.disabled = false;
@@ -4464,6 +4467,11 @@ async function initFirebase(cfg) {
     if (e.message && e.message.includes('projectId'))             errMsg = '❌ Invalid Project ID.';
     if (e.message && e.message.includes('API key'))               errMsg = '❌ Invalid API Key.';
     if (e.message && e.message.includes('network'))               errMsg = '❌ No internet connection.';
+    // Firestore rules require sign-in, so the auto-connect on page load (before login) is
+    // expected to be denied — gymFirebaseLogin() re-runs this check once signed in.
+    if (e.code === 'permission-denied') errMsg = gymFirebaseUser
+      ? '❌ Permission denied — Firestore rules are blocking this account (check Console → Firestore → Rules).'
+      : '🔒 Sign in to sync with Firebase.';
     setFBStatus('error', errMsg);
     const msg = document.getElementById('fb-saved-msg');
     if (msg) { msg.style.color = 'var(--danger)'; msg.textContent = errMsg; }
